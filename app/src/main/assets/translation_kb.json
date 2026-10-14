@@ -1,0 +1,122 @@
+{
+  "dictionary": [
+    {"ar": "سلام", "en": "peace", "fr": "paix", "pos": "noun"},
+    {"ar": "مرحبا", "en": "hello", "fr": "bonjour", "pos": "interjection"},
+    {"ar": "شكرا", "en": "thank you", "fr": "merci", "pos": "phrase"},
+    {"ar": "كتاب", "en": "book", "fr": "livre", "pos": "noun"},
+    {"ar": "علم", "en": "science", "fr": "science", "pos": "noun"},
+    {"ar": "معرفة", "en": "knowledge", "fr": "connaissance", "pos": "noun"},
+    {"ar": "ذكاء", "en": "intelligence", "fr": "intelligence", "pos": "noun"},
+    {"ar": "حاسوب", "en": "computer", "fr": "ordinateur", "pos": "noun"},
+    {"ar": "هاتف", "en": "phone", "fr": "téléphone", "pos": "noun"},
+    {"ar": "بيت", "en": "house", "fr": "maison", "pos": "noun"},
+    {"ar": "عمل", "en": "work", "fr": "travail", "pos": "noun"},
+    {"ar": "وقت", "en": "time", "fr": "temps", "pos": "noun"},
+    {"ar": "يوم", "en": "day", "fr": "jour", "pos": "noun"},
+    {"ar": "سماء", "en": "sky", "fr": "ciel", "pos": "noun"},
+    {"ar": "شمس", "en": "sun", "fr": "soleil", "pos": "noun"},
+    {"ar": "قمر", "en": "moon", "fr": "lune", "pos": "noun"},
+    {"ar": "ماء", "en": "water", "fr": "eau", "pos": "noun"},
+    {"ar": "طعام", "en": "food", "fr": "nourriture", "pos": "noun"},
+    {"ar": "صديق", "en": "friend", "fr": "ami", "pos": "noun"},
+    {"ar": "طريق", "en": "way", "fr": "chemin", "pos": "noun"},
+    {"ar": "سفر", "en": "travel", "fr": "voyage", "pos": "noun"},
+    {"ar": "مدينة", "en": "city", "fr": "ville", "pos": "noun"},
+    {"ar": "أمن", "en": "security", "fr": "sécurité", "pos": "noun"},
+    {"ar": "خصوصية", "en": "privacy", "fr": "confidentialité", "pos": "noun"},
+    {"ar": "نظام", "en": "system", "fr": "système", "pos": "noun"},
+    {"ar": "ذاكرة", "en": "memory", "fr": "mémoire", "pos": "noun"},
+    {"ar": "لغة", "en": "language", "fr": "langue", "pos": "noun"},
+    {"ar": "قلب", "en": "heart", "fr": "cœur", "pos": "noun"},
+    {"ar": "روح", "en": "soul", "fr": "âme", "pos": "noun"},
+    {"ar": "صبر", "en": "patience", "fr": "patience", "pos": "noun"},
+    {"ar": "أمل", "en": "hope", "fr": "espoir", "pos": "noun"},
+    {"ar": "جميل", "en": "beautiful", "fr": "beau", "pos": "adjective"},
+    {"ar": "سريع", "en": "fast", "fr": "rapide", "pos": "adjective"},
+    {"ar": "قوي", "en": "strong", "fr": "fort", "pos": "adjective"},
+    {"ar": "جديد", "en": "new", "fr": "nouveau", "pos": "adjective"},
+    {"ar": "كبير", "en": "big", "fr": "grand", "pos": "adjective"},
+    {"ar": "صغير", "en": "small", "fr": "petit", "pos": "adjective"},
+    {"ar": "سهل", "en": "easy", "fr": "facile", "pos": "adjective"},
+    {"ar": "صعب", "en": "difficult", "fr": "difficile", "pos": "adjective"},
+    {"ar": "يقوم", "en": "does", "fr": "fait", "pos": "verb"},
+    {"ar": "يقرأ", "en": "reads", "fr": "lit", "pos": "verb"},
+    {"ar": "يكتب", "en": "writes", "fr": "écrit", "pos": "verb"},
+    {"ar": "يفهم", "en": "understands", "fr": "comprend", "pos": "verb"},
+    {"ar": "يتعلم", "en": "learns", "fr": "apprend", "pos": "verb"},
+    {"ar": "يساعد", "en": "helps", "fr": "aide", "pos": "verb"},
+    {"ar": "نعم", "en": "yes", "fr": "oui", "pos": "adverb"},
+    {"ar": "لا", "en": "no", "fr": "non", "pos": "adverb"},
+    {"ar": "من فضلك", "en": "please", "fr": "s'il vous plaît", "pos": "phrase"},
+    {"ar": "مع السلامة", "en": "goodbye", "fr": "au revoir", "pos": "phrase"},
+    {"ar": "صباح الخير", "en": "good morning", "fr": "bonjour", "pos": "phrase"},
+    {"ar": "مساء الخير", "en": "good evening", "fr": "bonsoir", "pos": "phrase"}
+  ],
+  "phrases": [
+    {
+      "ar": "كيف حالك",
+      "en": "How are you",
+      "fr": "Comment allez-vous",
+      "notes": "تحية وسؤال عن الحال"
+    },
+    {
+      "ar": "أنا بخير والحمد لله",
+      "en": "I am fine, praise be to God",
+      "fr": "Je vais bien, Dieu soit loué",
+      "notes": "إجابة التحية المعتادة"
+    },
+    {
+      "ar": "ما اسمك",
+      "en": "What is your name",
+      "fr": "Comment vous appelez-vous",
+      "notes": "سؤال عن الهوية"
+    },
+    {
+      "ar": "اسمي زهرة",
+      "en": "My name is Zahra",
+      "fr": "Je m'appelle Zahra",
+      "notes": "تعريف بالاسم"
+    },
+    {
+      "ar": "تشرفت بمعرفتك",
+      "en": "Nice to meet you",
+      "fr": "Enchanté de faire votre connaissance",
+      "notes": "عبارة مجاملة وترحيب"
+    },
+    {
+      "ar": "أين المحطة",
+      "en": "Where is the station",
+      "fr": "Où est la gare",
+      "notes": "سؤال عن المكان والملاحة"
+    },
+    {
+      "ar": "كم الساعة الآن",
+      "en": "What time is it now",
+      "fr": "Quelle heure est-il",
+      "notes": "سؤال عن الوقت"
+    },
+    {
+      "ar": "كم السعر",
+      "en": "How much does it cost",
+      "fr": "Combien ça coûte",
+      "notes": "سؤال عن الأسعار"
+    },
+    {
+      "ar": "أحتاج إلى مساعدة",
+      "en": "I need help",
+      "fr": "J'ai besoin d'aide",
+      "notes": "طلب مساعدة طارئة"
+    },
+    {
+      "ar": "على الرحب والسعة",
+      "en": "You are welcome",
+      "fr": "De rien",
+      "notes": "رد على الشكر"
+    }
+  ],
+  "morphology": {
+    "ar_prefixes": ["ال", "وال", "فال", "بال", "كال", "لل", "و", "ف", "ب", "ك", "ل", "س"],
+    "ar_suffixes": ["ها", "هم", "هن", "هما", "ك", "كم", "كن", "كما", "نا", "ي", "ه", "ان", "ين", "ون", "ات", "ة"],
+    "en_suffixes": ["ing", "ed", "ly", "es", "s", "tion", "able", "ment"]
+  }
+}
