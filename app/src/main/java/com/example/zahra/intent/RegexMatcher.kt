@@ -42,7 +42,13 @@ object RegexMatcher {
     // 13. Help
     PatternRule("help", Regex("^(?:ساعدني|مساعدة|ماذا\\s+تستطيعين|كيف\\s+استخدمك|دليل|help)\\b", RegexOption.IGNORE_CASE), 0.95),
     // 14. Definitions / General
-    PatternRule("define_word", Regex("^(?:ما\\s+هو|ما\\s+هي|ما\\s+معنى|عرف(?:لي)?|what\\s+is)\\s+(.+)", RegexOption.IGNORE_CASE), 0.92, 1)
+    PatternRule("define_word", Regex("^(?:ما\\s+هو|ما\\s+هي|ما\\s+معنى|عرف(?:لي)?|what\\s+is)\\s+(.+)", RegexOption.IGNORE_CASE), 0.92, 1),
+    // 15. Local Image Generation (Procedural canvas, quotes, pixel art)
+    PatternRule("generate_image", Regex(".*(?:انش[ئيا]|ارسم|صمم|ولد|اعمل|سوي)?\\s*(?:لي)?\\s*(?:صوره|صورة|لوحه|لوحة|خلفيه|خلفية|رسمه|رسمة|بطاقه|بطاقة|بكسل|pixel|draw|paint|generate\\s*image).*|^(?:انش[ئيا]|ارسم|صمم|ولد)\\b.*", RegexOption.IGNORE_CASE), 0.98, 1),
+    // 16. Schedule and Alarms (Autonomous Agent Reminders)
+    PatternRule("create_schedule", Regex(".*(?:جدول|فكرني|ذكرني|نبهني|ابعتلي|تذكير|منبه|schedule|remind).*\\b.*", RegexOption.IGNORE_CASE), 0.98, 1),
+    // 17. List Schedules
+    PatternRule("list_schedules", Regex(".*(?:اعرض\\s+الجداول|المواعيد|مواعيدي|المنبهات|قائمة\\s+التنبيهات|المجدول|schedules).*", RegexOption.IGNORE_CASE), 0.95)
   )
 
   fun match(normalizedText: String): RegexMatch? {

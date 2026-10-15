@@ -71,4 +71,82 @@ class ZahraEngineUnitTest {
       assertTrue(article.contains(sentence))
     }
   }
+
+  @Test
+  fun testMemoryEngine_extractsFactsAndManagesMemory() {
+    val memoryEngine = com.example.zahra.engines.MemoryEngine()
+    val initialCount = memoryEngine.getFacts().size
+    assertEquals(0, initialCount)
+
+    // Test automatic name extraction
+    val learnedFact = memoryEngine.scanAndExtractFact("اسمي عبد الرحمن")
+    assertNotNull(learnedFact)
+    assertEquals("عبد الرحمن", learnedFact?.value)
+
+    // Test automatic location extraction
+    val locFact = memoryEngine.scanAndExtractFact("أعيش في المدينة المنورة")
+    assertNotNull(locFact)
+    assertEquals("المدينة المنورة", locFact?.value)
+
+    // Test manual fact addition and deletion
+    val manual = memoryEngine.addFact(
+      com.example.zahra.model.FactCategory.PREFERENCE,
+      "الخط المفضل",
+      "الخط الكوفي المودرن"
+    )
+    assertTrue(memoryEngine.getFacts().any { it.id == manual.id })
+
+    memoryEngine.deleteFact(manual.id)
+    assertFalse(memoryEngine.getFacts().any { it.id == manual.id })
+  }
+
+  @Test
+  fun testFrancoAndColloquial_detectionAndNormalization() {
+    // 1. Test Franco-Arabic detection
+    val francoLang = LanguageDetector.detect("ezayak ya habibi 3amel eh")
+    assertEquals(DetectedLang.FRANCO, francoLang.language)
+
+    // 2. Test Franco-Arabic normalization into Arabic keywords
+    val normalizedFranco = ZahraNormalizer.normalize("shokran ya habibi 3amel eh")
+    assertTrue(normalizedFranco.contains("شكرا"))
+    assertTrue(normalizedFranco.contains("حبيبي"))
+
+    // 3. Test Egyptian and Colloquial Arabic normalization
+    val colloquial = ZahraNormalizer.normalize("عايز اعرف مواقيت الصلاة دلوقتي وبكره")
+    assertTrue(colloquial.contains("الان"))
+    assertTrue(colloquial.contains("غدا"))
+  }
+
+  @Test
+  fun testLocalImageEngine_supportsAllThreeModes() {
+    val engine = com.example.zahra.engines.LocalImageEngine()
+
+    // Mode 1: Vector Canvas
+    val vectorRes = engine.generateImage("ارسم فضاء كوني", forcedMode = "vector")
+    assertEquals("vector", vectorRes.mode)
+    assertEquals("galaxy", vectorRes.shapeStyle)
+    assertTrue(vectorRes.title.isNotBlank())
+
+    // Mode 2: Quote & Calligraphy Card
+    val quoteRes = engine.generateImage("بطاقة اقتباس وحكمة", forcedMode = "quote_card")
+    assertEquals("quote_card", quoteRes.mode)
+    assertTrue(quoteRes.quoteArabic.isNotBlank())
+    assertTrue(quoteRes.quoteAuthor.isNotBlank())
+
+    // Mode 3: Generative Pixel Art
+    val pixelRes = engine.generateImage("بكسل آرت 8bit", forcedMode = "pixel_art", forcedStyle = "cyber")
+    assertEquals("pixel_art", pixelRes.mode)
+    assertEquals(16, pixelRes.pixelGrid.size)
+    assertEquals(16, pixelRes.pixelGrid[0].size)
+  }
+
+  @Test
+  fun testImagePrompt_routesCorrectly() {
+    val rawPrompt = "أنشئ لي صورة إجرائية تعبيرية جميلة"
+    val normalized = ZahraNormalizer.normalize(rawPrompt)
+    val match = com.example.zahra.intent.RegexMatcher.match(normalized)
+    assertNotNull(match)
+    assertEquals("generate_image", match?.intent)
+  }
 }
+

@@ -1,37 +1,55 @@
 package com.example.ui.theme
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-private val ZahraDarkColorScheme = darkColorScheme(
-  primary = ZahraCyan,
-  onPrimary = Color.Black,
-  primaryContainer = ZahraViolet,
-  onPrimaryContainer = Color.White,
-  secondary = ZahraViolet,
+private val ChatGPTLightColorScheme = lightColorScheme(
+  primary = GptAccentBlue,
+  onPrimary = Color.White,
+  primaryContainer = GptPlusPillBgLight,
+  onPrimaryContainer = GptPlusPillTextLight,
+  secondary = GptAccentBlue,
   onSecondary = Color.White,
-  secondaryContainer = Color(0xFF2E1065),
-  onSecondaryContainer = Color(0xFFE9D5FF),
-  tertiary = ZahraPink,
-  onTertiary = Color.Black,
-  background = ZahraBackground,
-  onBackground = ZahraTextPrimary,
-  surface = ZahraSurface,
-  onSurface = ZahraTextPrimary,
-  surfaceVariant = ZahraGlassCard,
-  onSurfaceVariant = ZahraTextSecondary,
-  outline = ZahraGlassBorder
+  background = GptLightBg,
+  onBackground = GptLightTextPrimary,
+  surface = GptLightSurface,
+  onSurface = GptLightTextPrimary,
+  surfaceVariant = GptLightInputCapsule,
+  onSurfaceVariant = GptLightTextSecondary,
+  outline = GptLightBorder,
+  outlineVariant = GptLightDivider
+)
+
+private val ChatGPTDarkColorScheme = darkColorScheme(
+  primary = GptAccentBlue,
+  onPrimary = Color.White,
+  primaryContainer = GptPlusPillBgDark,
+  onPrimaryContainer = GptPlusPillTextDark,
+  secondary = GptAccentBlue,
+  onSecondary = Color.White,
+  background = GptDarkBg,
+  onBackground = GptDarkTextPrimary,
+  surface = GptDarkSurface,
+  onSurface = GptDarkTextPrimary,
+  surfaceVariant = GptDarkInputCapsule,
+  onSurfaceVariant = GptDarkTextSecondary,
+  outline = GptDarkBorder,
+  outlineVariant = GptDarkDivider
 )
 
 @Composable
 fun ZahraTheme(
+  darkTheme: Boolean = isSystemInDarkTheme(),
   content: @Composable () -> Unit
 ) {
-  // Always use ZahraDarkColorScheme for true OLED Liquid Glass experience
+  val colors = if (darkTheme) ChatGPTDarkColorScheme else ChatGPTLightColorScheme
+
   MaterialTheme(
-    colorScheme = ZahraDarkColorScheme,
+    colorScheme = colors,
     typography = Typography,
     content = content
   )

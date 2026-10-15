@@ -1,147 +1,138 @@
-# Zahra (زهرة) 2.0 Professional — Offline AI Assistant
+# زهرة 3 (Zahra 3) — الوكيل الذكي المحلي المتكامل ونظام الجدولة وتوليد الصور
 
-A high-performance, zero-model, zero-network, privacy-first mobile AI assistant that delivers real conversational and utilitarian intelligence through deterministic algorithms, statistical NLP (Naive Bayes, TF-IDF, TextRank), fuzzy retrieval, and curated knowledge bases—all operating 100% offline in airplane mode with an ultra-sleek OLED Liquid Glass UI.
+تحويل تطبيق "زهراء" إلى **زهرة 3 (Zahra 3)**: وكيل ذكي مستقل (Autonomous AI Agent) فائق القدرة يعمل محلياً 100% دون خوادم خارجية، مع تفعيل كل بيكسل وعنصر تفاعلي في النظام، محرك توليد صور وبطاقات فنية إجرائية محلي، نظام جدولة ومواعيد ذكي متصل بإشعارات أندرويد الحقيقية، ترقية الذاكرة وفهم اللهجات العامية والفرانكو بنسبة 180 درجة، ووضع تفكير عميق تفاعلي (Chain of Thought).
 
 ---
 
-## User Review & Critical Decisions
+## مراجعة المستخدم والقرارات الحاسمة (User Review & Critical Decisions)
 
 > [!IMPORTANT]
-> **Deterministic Zero-Model Guarantee**: Zahra operates without any LLM weights, downloaded `.onnx`/`.tflite` model files, or network telemetry. All reasoning stems from deterministic finite-state machines, regex command parsing, log-space Multinomial Naive Bayes classification with Laplace smoothing, TextRank graph summarization, Porter & Arabic light stemming, astronomical prayer time calculations, and indexed local SQLite/JSON knowledge bases.
-
-- **Dual-Layer Architecture**: A production-ready Android Jetpack Compose application featuring the full 7-screen Liquid Glass design system, backed by an offline computational linguistics engine that implements all 6 layers of the Zahra specification.
-- **Strict Citation & Confidence Gating**:
-  - Confidence $\ge 0.75$: Direct authoritative response with citations (`[المصدر: ...]`).
-  - Confidence $0.40 - 0.74$: Qualified response with `(ثقة متوسطة)` badge.
-  - Confidence $< 0.40$: Explicit refusal (`"مش متأكد من الإجابة بدقة"`) paired with 3 intelligent closest suggestions. Zero hallucinations.
-- **Local Data Protection**: All user notes, tasks, and conversation turns are stored locally in SQLite with AES-256 encryption.
-
----
-
-## 1. Overview & Core Concept
-
-- **What It Does**: Zahra is an offline executive assistant and computational intelligence engine for Arabic and multilingual users. It handles arithmetic & symbolic math, bilingual translation (Arabic ↔ English ↔ French) with morphological stemming, Quran/Hadith/Fiqh lookups with strict source attribution, extractive TextRank summarization, intelligent task management with automatic TF-IDF categorization, and smart note-taking with RAKE keyword extraction.
-- **Target Persona**: Privacy-conscious professionals, students, travelers, and researchers who require reliable, instant, and private assistance without internet access, battery drain, or subscription lock-in.
-- **Key Value**: 100% reliable offline utility under 50 MB, sub-200ms response latency, zero hallucinations, zero cloud dependency, and permanent privacy.
+> تم تأكيد تفضيلات المستخدم عبر الأسئلة التفاعلية والمطالب المباشرة:
+> 1. **محرك توليد الصور المحلي**: دمج الأنماط الثلاثة معًا مع خيارات وأزرار تفاعلية (Chips) تمكّن المستخدم من التبديل بين:
+>    - محرك الرسومات والفن الإجرائي الذكي (Canvas Procedural Art: فضاء، طبيعة، أشكال تجريدية، تدرجات عصبية).
+>    - مولد البطاقات الرقمية والاقتباسات الفنية (Aesthetic Typography Cards: خطوط عربية، زخارف، تصدير ومشاركة).
+>    - محرك فن البكسل والأنماط الهندسية التوليدية (Generative Pixel Art & Islamic Geometric Patterns).
+> 2. **وضع التفكير بعمق (Deep Thinking)**: عرض مراحل التفكير التفاعلية خطوة بخطوة (Chain of Thought) في بطاقة قابلة للطي والفتح داخل الرسالة تُظهر خطوات التحليل، الفرضيات، والتحقق الذاتي قبل تقديم الإجابة النهائية.
+> 3. **نظام الجدولة والتنبيهات للوكيل (Agent Scheduling)**:
+>    - إضافة شاشة "الجدولة والتنبيهات" (Scheduling) إلى القائمة الجانبية (Drawer).
+>    - إضافة خيار "جدولة موعد / تذكير" في قائمة الإضافة (+) السريعة.
+>    - قدرة زهرة كوحدة وكيل (AI Agent) على فهم الأوامر الصوتية والنصية وجدولة التنبيهات تلقائيًا دون تدخل يدوي (مثل: *"ابعتلي كل يوم الساعة 8 صباحاً أذكار الصباح"* أو *"فكرني بكرة الساعة 5 بميعاد الطبيب"*).
+>    - ربط الجدولة بـ `AlarmManager` و `NotificationManager` لإطلاق إشعارات نظام أندرويد حقيقية في الوقت المحدد بدقة.
+> 4. **ثيم الزجاج الشفاف (Glassmorphism)**: جعله خياراً اختيارياً في الإعدادات، مع الحفاظ على التصميم الأساسي المعتمد الأنيق كافتراضي.
+> 5. **ترقية الذاكرة وفهم اللغات واللهجات 180 درجة**: دعم كامل للهجة المصرية والعربية العامية، الفرانكو العربي (مثل `3amel eh`, `fakkarni bokra`), الفصحى، والإنجليزية، وتخزين واسترجاع بيانات وحقائق المستخدم تلقائياً وبشكل دائم.
 
 ---
 
-## 2. User Experience & Visual Design
+## 1. النظرة العامة والمفهوم الأساسي (Overview & Core Concept)
 
-### Visual Identity & Theme
-- **Theme**: "Liquid Glass" (iOS 26 aesthetic) on deep OLED black.
-- **Color Palette**:
-  - Background: `#0A0A0F` (near-black, battery-conserving OLED background)
-  - Primary / Gradient Start: `#6B21A8` (deep royal violet)
-  - Secondary / Gradient End: `#06B6D4` (vibrant cyber cyan)
-  - Surface Glass: `rgba(255, 255, 255, 0.08)` with subtle `rgba(255, 255, 255, 0.15)` border strokes
-  - Accent / Highlights: `#F472B6` (soft luminous pink for tags and badges)
-  - Text: High contrast `#F8FAFC` for headers, `#94A3B8` for secondary metadata
-- **Typography & Layout**:
-  - Full RTL (Right-to-Left) native support for Arabic with LTR auto-detection for code/math/Latin.
-  - Generous 16dp / 24dp padding grid, 24dp glass rounded card corners, and floating navigation bar with fluid spring transitions.
-
-### The 7 Core Screens
-1. **Chat Screen**: Conversational interface with fast streaming simulation, typing pulse indicator, intent & confidence tag badges, citation links, quick suggestion chips, and instant action buttons.
-2. **Tasks Screen**: Auto-categorized todo list with TF-IDF classification (Work, Personal, Urgent, Finance), due date extraction from Arabic text ("بكرة", "الأحد الجاي"), priority score calculation, and filter tabs.
-3. **Notes Screen**: Rich note management with automatic RAKE keyword extraction, tag cloud, full-text inverted search, and instant note creation from chat.
-4. **Translate Screen**: AR ↔ EN ↔ FR dictionary and phrasebook with morphological light stemmer, grammar POS tags, and offline search.
-5. **Religion & Guidance Screen**: Authentic Quran ayah search with tafsir summaries, Hadith verification with isnad/book references, Fiqh Q&A with madhhab tags, astronomical prayer time calculator with countdown to next prayer, and Qibla direction formula.
-6. **Memory Archive Screen**: Historical timeline of conversations, memory inspection, RAKE topics filter, and entity graph viewer.
-7. **Settings & Honest Limitations**: Clear transparency screen detailing rule-based limitations, local encryption status, airplane mode test tool, database backup export, and system performance benchmarks.
+- **ما تقدمه زهرة 3**: تجربة مساعد شخصي ووكيل ذكي محلي (On-Device Autonomous AI Agent) ينفذ المهام المعقدة بشكل ذاتي وتفاعلي. لا توجد أزرار وهمية أو نصوص جامدة؛ كل ضغطة وكل أمر نصي أو صوتي يؤدي إلى نتيجة حقيقية مرئية وقابلة للتفاعل.
+- **الجمهور المستهدف**: المستخدمون الباحثون عن الخصوصية التامة (Offline-First)، الطلاب، المهنيون، وعشاق الإنتاجية اليومية وتنظيم المواعيد وحفظ الذكريات وتوليد التصاميم الإبداعية محلياً.
+- **القيمة الجوهرية**: سرعة فائقة صفر تأخير، أمان كامل بدون إنترنت، استقلالية الوكيل في اتخاذ الإجراءات، وواجهة عربية ساحرة تدمج بين الجمال والوظيفة الفعالة.
 
 ---
 
-## 3. Key Product Decisions & Trade-Offs
+## 2. تجربة المستخدم والتصميم البصري (UX & Visual Design)
 
-| Decision | Chosen Approach | Rationale | Alternatives Considered |
+### تدفقات المستخدم الرئيسية (User Flows)
+1. **طلب إنشاء صورة أو ملصق**:
+   - من شاشة البداية بالنقر على زر "إنشاء صورة أو ملصق"، أو من زر (+) في حقل الإدخال، أو بكتابة أمر طبيعي (*"ارسم لي مشهد فضاء هادئ"* أو *"صمم لي بطاقة حكمة اليوم"*).
+   - تظهر بطاقة تفاعلية حية `LocalImageGeneratorCard` تحتوي على الصورة المولدة محلياً، مع شرائح (Chips) للتبديل الفوري بين الأنماط الثلاثة (فن إجرائي Canvas، بطاقة رقمية Typography، بكسل آرت وزخارف)، مع أزرار للحفظ وتغيير البذور (Regenerate Seed) وتعديل الألوان.
+2. **الجدولة والتذكير الذكي (Scheduling & Agent Automation)**:
+   - الوصول عبر:
+     - القائمة الجانبية (Drawer): بند جديد "الجدولة والتنبيهات المجدولة".
+     - زر الإضافة (+): خيار "جدولة منبه أو إجراء للوكيل".
+     - المحادثة الطبيعية: الوكيل يستخرج التاريخ والوقت والنوع تلقائياً ويقوم بالجدولة مع رسالة تأكيد تفاعلية متصلة بنظام إشعارات أندرويد.
+   - شاشة الجدولة تعرض المواعيد القادمة، التكرار (يومي، أسبوعي، مخصص)، مفتاح تفعيل/إيقاف، وإمكانية الحذف أو التعديل الفوري.
+3. **وضع التفكير بعمق (Deep Thinking Toggle)**:
+   - زر تبديل أنيق بأيقونة الدماغ في شريط المحادثة بجانب زر الإرسال.
+   - عند تفعيله، تقوم زهرة بمحاكاة التحليل العميق متعدد الخطوات، وتظهر بطاقة "خطوات التفكير" الشفافة مع مراحل معالجة متحركة يمكن للمستخدم فتحها للاطلاع على منطق الحل قبل النص الختامي.
+4. **تخصيص المظهر الشفاف (Glassmorphism Mode)**:
+   - خيار صريح في شاشة الإعدادات: "تفعيل نمط الزجاج الشفاف (Glassmorphism)".
+   - عند إيقافه: يعتمد التصميم النظيف العصري M3 الافتراضي المريح للعين.
+   - عند تفعيله: تكتسب البطاقات والأشرطة خلفية ضبابية وزجاجية مصقولة مع حواف مضيئة وتأثيرات Blur فائقة الدقة.
+
+### الهوية البصرية ونظام الألوان (Design Tokens)
+- **الخلفية الافتراضية**: رمادي داكن فاحم هادئ `#121316` مع أسطح `#1E1F24`.
+- **ألوان التمييز (Accents)**:
+  - لون زهرة التوقيعي الأساسي: الزمردي المتألق `#10A37F` والأزرق السيبراني `#3B82F6`.
+  - وضع التفكير العميق: الأرجواني الملكي والنيون `#8B5CF6`.
+  - الجدولة والمنبهات: الكهرماني الذهبي `#F59E0B`.
+- **الطباعة**: خطوط واضحة بأحجام متناسقة من 12sp إلى 24sp، تدعم اتجاه اليمين إلى اليسار (RTL) بشكل أصيل وكامل لكافة عناصر التحكم.
+
+---
+
+## 3. القرارات التقنية وبنية النظام (Key Decisions & Trade-Offs)
+
+| المجال | القرار المعتمد | السبب والميزة التنافسية | البدائل المرفوضة |
 |---|---|---|---|
-| **AI Subsystem** | Deterministic Expert System + Statistical NLP (Naive Bayes + TF-IDF + TextRank) | Guaranteed zero network, zero heavy weight models, runs under 50MB with instant startup | Local LLMs (GGUF/ONNX) rejected due to 1-4GB model weight size, battery drain, and hallucination risk |
-| **Summarization** | Extractive TextRank Graph Centrality | Picks the most representative existing sentences mathematically; cannot fabricate facts | Generative summarization rejected because it requires an LLM |
-| **Arabic NLP** | Custom Unicode Normalizer & Light Stemmer (stripping diacritics, unifying Alef/Ya/Ta-marbuta, affix stripping) | Instant performance on mobile CPU without external dependencies | PyArabic / CoreNLP rejected due to runtime weight and complex bindings |
-| **Storage & Memory** | Structured SQLite (Room) + In-Memory Ring Buffer + Inverted Index | Fast full-text search, persistent privacy, atomic transactions | Unstructured JSON files rejected due to query latency on large datasets |
+| **توليد الصور أوفلاين** | محرك إجرائي هجين (Canvas Vector + Typography + Pixel/Geometric Art) يعتمد على خوارزميات Kotlin Native و Jetpack Compose DrawScope | خفيف جداً، فوري وسريع (أقل من 50ms)، لا يتطلب تحميل نماذج ضخمة تستهلك ذاكرة الهاتف، وقابل للتحكم والتخصيص التام | نماذج Diffusion ضخمة (جيجابايت متعددة وتسبب انهيار الذاكرة OOM على الهواتف العادية) |
+| **الجدولة والتنبيهات** | تكامل ثنائي بين `AlarmManager` و `NotificationManager` مع تخزين دائم في محرك زهرة | يضمن إطلاق الإشعارات الحقيقية في مواعيدها المحددة حتى لو كان التطبيق مغلقاً أو في الخلفية | الاعتماد على مؤقتات مؤقتة داخلية تنتهي بإغلاق التطبيق |
+| **الذاكرة وفهم العامية** | قاموس تطبيقي موسّع لمعالجة العامية المصرية والخليجية والشامية والفرانكو مع خوارزميات Fuzzy Matching ومطابقة الكيانات اللفظية | مرونة قصوى في فهم كلام المستخدم اليومي بدون اشتراط كتابة عربية فصحى مقيدة | الاعتماد فقط على الفصحى المنضبطة |
+| **التفكير العميق** | محرك تفكير إجرائي مُهيكل يُحلل الطلب إلى: (تحليل النية -> استرجاع الذاكرة -> التخطيط المنطقي -> المراجعة والتحقق -> الصياغة) | يمنح المستخدم شفافية كاملة وثقة في الإجابة مع تجربة بصرية فائقة الروعة | نصوص إجابة جافة دون إظهار مسار الاستنتاج |
 
 ---
 
-## 4. Technical Architecture & Data Strategy
+## 4. البنية المعمارية وتدفق البيانات (System Architecture & Data Strategy)
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│                        ZAHRA 2.0 MOBILE CLIENT                         │
-├────────────────────────────────────────────────────────────────────────┤
-│  JETPACK COMPOSE LIQUID GLASS UI (Chat, Tasks, Notes, Translate, etc.) │
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │ User Query / Voice / Text
-                                    ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                     LAYER 1: INPUT NORMALIZATION                       │
-│  • Unicode Tokenizer (Word boundary segmentation)                      │
-│  • Arabic Normalizer (Diacritics removal, Alef/Ya/Ta unification)      │
-│  • Script & Language Detector (Arabic / Latin / Mixed N-grams)         │
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │ Clean Tokens & Script Profile
-                                    ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                     LAYER 2: INTENT CLASSIFICATION                     │
-│  [1] Regex Matcher ──▶ [2] Naive Bayes ──▶ [3] Fuzzy ──▶ [4] FSM Dialog│
-│  (Exact commands)     (Log-space NB)     (Levenshtein)  (Multi-turn)   │
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │ Intent + Confidence Score
-                                    ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                     LAYER 3: ENTITY EXTRACTION                         │
-│  • Numbers & Ordinals (Arabic-Indic: ٠-٩ & Latin: 0-9)                │
-│  • Relative & Absolute Dates (بكرة, الأحد الجاي, بعد أسبوع, 12 مارس)   │
-│  • Time & Prayer Expressions (٣ العصر, قبل الفجر, 14:30)               │
-│  • Currencies & Physical Units (SAR, EGP, USD, kg, km, °C)             │
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │ Structured Intent + Extracted Slots
-                                    ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                     LAYER 4: REASONING ROUTER                          │
-│  ┌──────────────┬──────────────┬──────────────┬─────────────────────┐  │
-│  │ Math Engine  │ Religion KB  │ Translate KB │ TextRank Summarizer │  │
-│  ├──────────────┼──────────────┼──────────────┼─────────────────────┤  │
-│  │ Task Engine  │ Note Engine  │ Dialog FSM   │ Fallback Engine     │  │
-│  └──────────────┴──────────────┴──────────────┴─────────────────────┘  │
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │ Raw Engine Output + Citations
-                                    ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                     LAYER 5 & 6: MEMORY & RESPONSE                     │
-│  • Short-term: 10-turn RAM Ring Buffer                                 │
-│  • Long-term: SQLite Inverted Index + RAKE Keywords                    │
-│  • Confidence Gate: Direct (≥0.75) | Qualified (0.40-0.74) | Safe (<0.4│
-│  • Citation Formatter: [المصدر: ...]                                   │
+│                        Zahra 3 UI (Jetpack Compose)                    │
+│                                                                        │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌────────────┐  │
+│  │ Chat Screen  │  │ Schedule     │  │ Notes/Tasks  │  │ Settings   │  │
+│  │ (Deep CoT,   │  │ Screen       │  │ Archive      │  │ (Glass UI  │  │
+│  │ Image Cards) │  │ (Alarms)     │  │ Knowledge    │  │  Toggle)   │  │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └─────┬──────┘  │
+└─────────┼─────────────────┼─────────────────┼────────────────┼─────────┘
+          │                 │                 │                │
+┌─────────▼─────────────────▼─────────────────▼────────────────▼─────────┐
+│                           ZahraViewModel                               │
+│  - Reactive UI State (StateFlow)                                       │
+│  - Autonomous Agent Orchestration & Tool Execution                     │
+│  - Notification & Alarm Dispatcher                                     │
+└───────────────────────────────┬────────────────────────────────────────┘
+                                │
+┌───────────────────────────────▼────────────────────────────────────────┐
+│                        ZahraRouter & Core Engines                      │
+│                                                                        │
+│  ┌────────────────────┐ ┌────────────────────┐ ┌────────────────────┐  │
+│  │ Dialect/Franco     │ │ Local Image Engine │ │ Schedule & Alarm   │  │
+│  │ Normalizer & NLP   │ │ (Vector, Card, Pix)│ │ Notification Eng.  │  │
+│  └────────────────────┘ └────────────────────┘ └────────────────────┘  │
+│  ┌────────────────────┐ ┌────────────────────┐ ┌────────────────────┐  │
+│  │ Deep Thinking CoT  │ │ Advanced 180° Mem. │ │ Task & Note & Math │  │
+│  │ Reasoning Engine   │ │ Profile & Entities │ │ & Religion Engines │  │
+│  └────────────────────┘ └────────────────────┘ └────────────────────┘  │
+└───────────────────────────────┬────────────────────────────────────────┘
+                                │
+┌───────────────────────────────▼────────────────────────────────────────┐
+│             Persistent Local Storage & Android System Services         │
+│  - SharedPreferences / JSON Repository (Sessions, Facts, Schedules)    │
+│  - Android AlarmManager, BroadcastReceiver, NotificationManager        │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
----
-
-## 5. Implementation Roadmap & Deliverables
-
-1. **Android Resource & Branding Setup**:
-   - Set app name to "Zahra" in `res/values/strings.xml`, `settings.gradle.kts`, and `metadata.json`.
-   - Create custom vector neural-flower adaptive icon in `res/drawable`.
-2. **Knowledge Base Assets**:
-   - Curated JSON databases bundled in assets:
-     - `religion_kb.json` (Quran, Hadith, Fiqh, Prayer formula)
-     - `translation_kb.json` (AR-EN-FR glossaries, phrases, morphological roots)
-     - `general_kb.json` (Science, history, tech, geography facts with citations)
-     - `intent_corpus.json` (Training sets for 25 intents)
-3. **Core AI Engine Implementation**:
-   - `ZahraNormalizer` & `LanguageDetector`
-   - `ZahraTokenizer` & `ArabicStemmer`
-   - `NaiveBayesClassifier` (log-space Multinomial with Laplace smoothing)
-   - `EntityExtractor` (Arabic dates, times, currencies, units, numbers)
-   - Specialized engines: `MathEngine`, `TextRankSummarizer`, `ReligionEngine`, `TranslationEngine`, `TaskEngine`, `NoteEngine`, `DialogEngine`, `FallbackEngine`
-4. **Local Database & Storage (Room / SQLite)**:
-   - Entities for Messages, Tasks, Notes, and Memory Index.
-   - DAOs with search, filtering, and CRUD operations.
-5. **Liquid Glass UI & Screens**:
-   - Theme definition with OLED `#0A0A0F`, `#6B21A8`, `#06B6D4`, and glass modifier components.
-   - Interactive 7-tab navigation: Chat, Tasks, Notes, Translate, Religion, Archive, and Settings.
-6. **Verification & Testing**:
-   - Compile applet verification.
-   - Unit tests for Normalizer, Naive Bayes, TextRank, and Math parser.
-   - Offline validation in Airplane mode.
+### خطة تنفيذ المكونات خطوة بخطوة:
+1. **ترقية نموذج البيانات (`ZahraModels.kt`)**:
+   - إضافة كائنات `ZahraSchedule` (المواعيد المجدولة، التكرار، الوقت، الإجراء الآلي).
+   - إضافة `LocalImagePayload` لدعم توليد الصور التفاعلية بالأنماط الثلاثة.
+   - إضافة `DeepThinkingPayload` لحفظ مراحل التفكير والتحليل.
+2. **محرك توليد الصور المحلي (`LocalImageEngine.kt`)**:
+   - بناء محرك توليد إجرائي يرسم على Canvas (مشاهد فضاء، طبيعة، أشكال هندسية، أنماط إسلامية).
+   - بناء مولد بطاقات اقتباسات رقمية بتدرجات لونية وإطارات فنية عربية.
+   - بناء مولد بكسل آرت عشوائي منظم (Procedural 16x16 / 8-bit Icons).
+3. **محرك الجدولة وتنبيهات النظام (`ScheduleEngine.kt` و `ZahraAlarmReceiver.kt`)**:
+   - إعداد قنوات إشعارات أندرويد الحقيقية (`NotificationChannel`).
+   - جدولة التنبيهات عبر `AlarmManager` مع معالجة تشغيل الصوت والاهتزاز.
+   - معالجة أوامر الوكيل الآلية المجدولة.
+4. **تطوير الذاكرة وفهم العامية والفرانكو (`LanguageDetector.kt` و `ZahraNormalizer.kt` و `MemoryEngine.kt`)**:
+   - توسيع قاموس التطبيع لدعم الفرانكو (الأرقام البديلة للحروف 2, 3, 5, 7) والعامية الشائعة.
+   - استخراج وتخزين حقائق المستخدم تلقائياً وتفعيل استرجاعها واستخدامها في الإجابات فورياً.
+5. **شاشات وواجهات المستخدم (`ScheduleScreen.kt`, `ChatScreen.kt`, `ToolsBottomSheet.kt`, `SettingsScreen.kt`)**:
+   - إضافة شاشة الجدولة ومفتاحها في القائمة الجانبية (Drawer).
+   - إضافة خيار الجدولة وإنشاء الصور إلى قائمة (+) السريعة.
+   - بطاقة تفاعلية لعرض وتوليد الصور داخل المحادثة.
+   - بطاقة تفكير عميق متحركة وقابلة للطي.
+   - خيار الزجاج الشفاف (Glassmorphism) في شاشة الإعدادات.
+6. **التحقق والتجميع الكامل (`compile_applet`)**:
+   - اختبار خلو الكود من أي أخطاء تجميع وتأكيد سلامة التشغيل.

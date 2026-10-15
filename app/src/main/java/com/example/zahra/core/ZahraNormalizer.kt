@@ -15,9 +15,65 @@ object ZahraNormalizer {
     "ما", "لا", "لم", "لن", "هل", "قد", "ثم", "أو", "بل", "لكن", "كل", "بعض", "يا"
   )
 
+  fun francoToArabic(input: String): String {
+    var s = input.lowercase()
+    val replacements = listOf(
+      "shokran" to "شكرا",
+      "ezayak" to "ازيك",
+      "ezayek" to "ازيك",
+      "3amel eh" to "عامل ايه",
+      "3amla eh" to "عاملة ايه",
+      "fakkarni" to "فكرني",
+      "jadwel" to "جدول",
+      "saba7 el kher" to "صباح الخير",
+      "saba7 el noor" to "صباح النور",
+      "mesa2 el kher" to "مساء الخير",
+      "inshallah" to "ان شاء الله",
+      "elhamdolilah" to "الحمد لله",
+      "tamam" to "تمام",
+      "habibi" to "حبيبي",
+      "keda" to "كده",
+      "mesh" to "مش",
+      "3ala" to "على",
+      "fe" to "في",
+      "kol" to "كل",
+      "koll" to "كل",
+      "yomy" to "يومي",
+      "yoman" to "يوميا",
+      "sa3a" to "ساعة",
+      "soora" to "صورة",
+      "esm" to "اسم",
+      "esmy" to "اسمي",
+      "ana" to "انا",
+      "enta" to "انت"
+    )
+    for ((from, to) in replacements) {
+      s = s.replace(Regex("\\b$from\\b"), to)
+    }
+
+    // Single character phonetic mappings
+    s = s.replace("3", "ع")
+      .replace("7", "ح")
+      .replace("2", "ء")
+      .replace("5", "خ")
+      .replace("8", "غ")
+      .replace("9", "ق")
+      .replace("sh", "ش")
+      .replace("th", "ث")
+      .replace("kh", "خ")
+      .replace("gh", "غ")
+
+    return s
+  }
+
   fun normalize(input: String?): String {
     if (input.isNullOrBlank()) return ""
     var text = input.trim()
+
+    // If input is likely Franco-Arabic, convert to Arabic
+    if (Regex("""[235789]""").containsMatchIn(text) || Regex("""\b(shokran|ezayak|3amel|fakkarni)\b""", RegexOption.IGNORE_CASE).containsMatchIn(text)) {
+      text = francoToArabic(text)
+    }
 
     // 1. Strip tashkeel and tatweel
     text = TASHKEEL_REGEX.replace(text, "")
@@ -38,7 +94,25 @@ object ZahraNormalizer {
     }
     text = sb.toString()
 
-    // 6. Normalize multiple whitespaces
+    // 6. Normalize common colloquial words to canonical base
+    val colloquialMap = listOf(
+      "عاوز" to "عايز",
+      "محتاج" to "عايز",
+      "اريد" to "عايز",
+      "بدي" to "عايز",
+      "دلوقتي" to "الان",
+      "الحين" to "الان",
+      "هسه" to "الان",
+      "وبكره" to "وغدا",
+      "بكره" to "غدا",
+      "وامبارح" to "وامس",
+      "امبارح" to "امس"
+    )
+    for ((from, to) in colloquialMap) {
+      text = text.replace(from, to)
+    }
+
+    // 7. Normalize multiple whitespaces
     return text.replace(Regex("\\s+"), " ")
   }
 

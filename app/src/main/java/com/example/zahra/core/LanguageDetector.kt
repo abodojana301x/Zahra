@@ -4,6 +4,7 @@ enum class DetectedLang {
   AR,
   EN,
   FR,
+  FRANCO,
   MIXED,
   UNKNOWN
 }
@@ -41,6 +42,14 @@ object LanguageDetector {
     }
 
     if (latinRatio > 0.75) {
+      val francoKeywords = listOf("3amel", "ezayak", "shokran", "habibi", "enta", "ana", "saba7", "tamam", "keda", "khalas", "inshallah", "fakkarni", "jadwel", "mesh", "leh", "koll")
+      val hasFrancoDigits = Regex("""[a-zA-Z]+[235789]|[235789]+[a-zA-Z]+""").containsMatchIn(text)
+      val hasFrancoWords = francoKeywords.any { text.lowercase().contains(it) }
+
+      if (hasFrancoDigits || hasFrancoWords) {
+        return LangResult(DetectedLang.FRANCO, "Franco-Arabic", 0.92)
+      }
+
       val isFrench = FRENCH_ACCENTS.containsMatchIn(text) || FRENCH_STOPWORDS.containsMatchIn(text)
       return LangResult(
         if (isFrench) DetectedLang.FR else DetectedLang.EN,
