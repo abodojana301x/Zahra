@@ -63,6 +63,9 @@ fun SettingsScreen(
   var newFactCategory by remember { mutableStateOf(FactCategory.PERSONAL) }
   var newFactKey by remember { mutableStateOf("") }
   var newFactValue by remember { mutableStateOf("") }
+  var editingFact by remember { mutableStateOf<ZahraUserFact?>(null) }
+  var editFactKey by remember { mutableStateOf("") }
+  var editFactValue by remember { mutableStateOf("") }
 
   Scaffold(
     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -440,12 +443,19 @@ fun SettingsScreen(
           horizontalArrangement = Arrangement.SpaceBetween,
           modifier = Modifier.fillMaxWidth()
         ) {
-          Text(
-            text = "ذاكرة زهرة عنك",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-          )
+          Column {
+            Text(
+              text = "ذاكرة زهرة الدائمة",
+              fontSize = 18.sp,
+              fontWeight = FontWeight.Bold,
+              color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+              text = "🔐 مشفرة محلياً (AES-256) وتخضع لتحكمك التام",
+              fontSize = 11.sp,
+              color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+          }
           Button(
             onClick = { showAddFactDialog = true },
             colors = ButtonDefaults.buttonColors(containerColor = GptAccentBlue),
@@ -460,7 +470,7 @@ fun SettingsScreen(
 
         if (userFacts.isEmpty()) {
           Text(
-            text = "لم يتم حفظ أي حقائق بعد. ستحفظ زهرة تفضيلاتك تلقائياً أثناء الحديث.",
+            text = "لم يتم حفظ أي حقائق دائمة بعد. يمكنك طلب حفظ معلومة أو إضافتها يدوياً.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 13.sp,
             modifier = Modifier.padding(vertical = 24.dp)
@@ -482,18 +492,56 @@ fun SettingsScreen(
                   .padding(12.dp)
               ) {
                 Column(modifier = Modifier.weight(1f)) {
-                  Text(
-                    text = fact.key,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                  )
+                  Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                      text = fact.key,
+                      fontWeight = FontWeight.Bold,
+                      fontSize = 14.sp,
+                      color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Surface(
+                      color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                      shape = RoundedCornerShape(4.dp)
+                    ) {
+                      Text(
+                        text = fact.category.labelAr,
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                      )
+                    }
+                  }
+                  Spacer(modifier = Modifier.height(2.dp))
                   Text(
                     text = fact.value,
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                   )
+                  Text(
+                    text = "المصدر: ${fact.source.labelAr}",
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                  )
                 }
+
+                // Edit Button
+                IconButton(
+                  onClick = {
+                    editingFact = fact
+                    editFactKey = fact.key
+                    editFactValue = fact.value
+                  }
+                ) {
+                  Icon(
+                    imageVector = Icons.Outlined.Edit,
+                    contentDescription = "تعديل الحقيقة",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                  )
+                }
+
+                // Delete Button
                 IconButton(onClick = { onDeleteFact(fact.id) }) {
                   Icon(
                     imageVector = Icons.Default.Delete,
@@ -505,9 +553,64 @@ fun SettingsScreen(
               }
             }
           }
+
+          Spacer(modifier = Modifier.height(8.dp))
+          TextButton(
+            onClick = {
+              onClearMemory()
+              Toast.makeText(context, "تم مسح كافة سجلات الذاكرة بنجاح", Toast.LENGTH_SHORT).show()
+            },
+            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+          ) {
+            Text("مسح كافة سجلات الذاكرة نهائياً", fontSize = 12.sp)
+          }
         }
       }
     }
+  }
+
+  // Edit Fact Dialog
+  editingFact?.let { currentFact ->
+    AlertDialog(
+      onDismissRequest = { editingFact = null },
+      title = { Text("تعديل معلومة في الذاكرة", fontWeight = FontWeight.Bold) },
+      text = {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+          OutlinedTextField(
+            value = editFactKey,
+            onValueChange = { editFactKey = it },
+            label = { Text("المفتاح أو التصنيف") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+          )
+          OutlinedTextField(
+            value = editFactValue,
+            onValueChange = { editFactValue = it },
+            label = { Text("المحتوى أو القيمة") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+          )
+        }
+      },
+      confirmButton = {
+        Button(
+          onClick = {
+            if (editFactKey.isNotBlank() && editFactValue.isNotBlank()) {
+              onUpdateFact(currentFact.id, editFactKey.trim(), editFactValue.trim(), currentFact.category)
+              editingFact = null
+              Toast.makeText(context, "تم تحديث المعلومة والتحقق من حفظها", Toast.LENGTH_SHORT).show()
+            }
+          }
+        ) {
+          Text("تحديث")
+        }
+      },
+      dismissButton = {
+        TextButton(onClick = { editingFact = null }) {
+          Text("إلغاء")
+        }
+      }
+    )
   }
 
   // Add Fact Dialog

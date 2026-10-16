@@ -273,3 +273,25 @@ zahra-system/
 | 3 | حساسية مسائل الفتوى والشريعة | مرتفع جداً | عزل إجابات الدين وحصرها في نصوص الآيات وتفاسيرها والأحاديث النبوية المخرجة فقط دون أي توليد. |
 | 4 | اختلاف لهجات التعبير عن المواعيد ("بكرة"، "عشية"، "الجمعة الياي") | متوسط | توسيع معجم المرادفات في `EntityExtractor` ليشمل التعبيرات الشائعة في اللهجات العربية. |
 | 5 | محاولات التلاعب بالمدخلات الرياضية (مثل كتابة تعبيرات لانهائية) | منخفض | تحديد أقصى طول للتعبير الحسابي ومعالجة الاستثناءات بأمان دون تعطل التطبيق. |
+
+---
+
+## 11. Phase 2 Completion & Verification: Reliable Memory & Scheduling
+
+### Overview
+تم إنجاز المرحلة الثانية (Phase 2: Reliable Memory & Scheduling) بنجاح كامل وفق مبدأ "الصدق قبل الذكاء" (Truth Before Intelligence):
+1. **الذاكرة الدائمة الآمنة (Workstream A & B)**:
+   - دورة حياة صارمة خماسية المراحل: `Requested → Validated → Saved → Verified → Retrievable`.
+   - قفل وكتابة متزامنة مع التحقق المباشر بإعادة القراءة من القرص (Read-Back Verification).
+   - تشفير محلي قياسي AES-256-GCM للبيانات الحساسة مع حماية سلامة البيانات عبر GCM Authentication Tag.
+   - فصل صريح بين سياق الجلسة المؤقت (Temporary Session Context) والحقائق الدائمة المثبتة بأمر المستخدم (Confirmed Persistent Memory).
+   - مناعة تامة ضد تعطل التطبيق أو البيانات التالفة (Resilient Corrupted-Data Fallback).
+2. **الجدولة والتنبيهات الموثوقة (Workstream C & D)**:
+   - دورة حياة سباعية المراحل: `Requested → Validated → Permission Checked → Persisted → Scheduled → Verified → Delivered`.
+   - حالات صريحة للتذكير: `PENDING`, `SCHEDULED`, `DELIVERED`, `COMPLETED`, `CANCELLED`, `FAILED`, `PERMISSION_REQUIRED`.
+   - التحقق من تسجيل المنبهات الحقيقية عبر `PendingIntent.FLAG_NO_CREATE` و فحص صلاحيات `SCHEDULE_EXACT_ALARM` و `POST_NOTIFICATIONS`.
+   - محرك مصالحة واستعادة تلقائي (Reconciliation Engine) يعمل عند إعادة تشغيل الهاتف (`BOOT_COMPLETED`)، أو تحديث الحزمة، أو تغيير التوقيت والمنطقة الزمنية.
+   - منع التسليم المكرر (Duplicate Delivery Prevention) عبر نافذة فحص زمنية وتحديث تلقائي للتذكيرات اليومية.
+3. **التواصل الصادق (Workstream E)**:
+   - امتناع حتمي عن الادعاء بحفظ معلومة أو جدولة تنبيه ما لم تتأكد العملية كتابةً وقراءةً على مستوى النظام.
+   - توضيح دقيق ومباشر عند نقص الأذونات أو الاعتماد على منبه تقريبي.

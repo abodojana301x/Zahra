@@ -70,14 +70,18 @@ class ZahraViewModel(application: Application) : AndroidViewModel(application) {
       messages = emptyList()
     )
 
+    val storedFacts = router.memoryEngine.getFacts()
+    val knownName = storedFacts.find { it.key.contains("الاسم") }?.value
+
     _uiState.value = _uiState.value.copy(
       activeSessionId = initialSession.id,
       sessions = listOf(initialSession),
       pinnedSessionIds = emptySet(),
+      userProfileName = knownName ?: "المستخدم",
       tasks = router.taskEngine.getTasks(),
       notes = router.noteEngine.getNotes(),
       schedules = router.scheduleEngine.getSchedules(),
-      userFacts = router.memoryEngine.getFacts()
+      userFacts = storedFacts
     )
   }
 
@@ -236,6 +240,7 @@ class ZahraViewModel(application: Application) : AndroidViewModel(application) {
         intent = response.intent,
         confidence = response.confidence,
         confidenceTier = response.confidenceTier,
+        outcomeState = response.outcomeState,
         source = response.source,
         followups = response.followups,
         toolPayload = response.toolPayload,

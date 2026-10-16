@@ -51,17 +51,13 @@ object ZahraNormalizer {
       s = s.replace(Regex("\\b$from\\b"), to)
     }
 
-    // Single character phonetic mappings
-    s = s.replace("3", "ع")
-      .replace("7", "ح")
-      .replace("2", "ء")
-      .replace("5", "خ")
-      .replace("8", "غ")
-      .replace("9", "ق")
-      .replace("sh", "ش")
-      .replace("th", "ث")
-      .replace("kh", "خ")
-      .replace("gh", "غ")
+    // Single character phonetic mappings only when adjacent to Latin letters
+    s = s.replace(Regex("""(?<=[a-z])3|3(?=[a-z])"""), "ع")
+      .replace(Regex("""(?<=[a-z])7|7(?=[a-z])"""), "ح")
+      .replace(Regex("""(?<=[a-z])2|2(?=[a-z])"""), "ء")
+      .replace(Regex("""(?<=[a-z])5|5(?=[a-z])"""), "خ")
+      .replace(Regex("""(?<=[a-z])8|8(?=[a-z])"""), "غ")
+      .replace(Regex("""(?<=[a-z])9|9(?=[a-z])"""), "ق")
 
     return s
   }
@@ -70,8 +66,10 @@ object ZahraNormalizer {
     if (input.isNullOrBlank()) return ""
     var text = input.trim()
 
-    // If input is likely Franco-Arabic, convert to Arabic
-    if (Regex("""[235789]""").containsMatchIn(text) || Regex("""\b(shokran|ezayak|3amel|fakkarni)\b""", RegexOption.IGNORE_CASE).containsMatchIn(text)) {
+    // If input is likely Franco-Arabic (contains Latin letters AND Franco patterns), convert to Arabic
+    val hasLatin = Regex("""[a-zA-Z]""").containsMatchIn(text)
+    val hasFrancoKeywords = Regex("""\b(shokran|ezayak|3amel|fakkarni|jadwel|habibi|tamam|keda|mesh|yomy|sa3a|soora|esmy)\b""", RegexOption.IGNORE_CASE).containsMatchIn(text)
+    if (hasFrancoKeywords || (hasLatin && Regex("""(?<=[a-zA-Z])[235789]|[235789](?=[a-zA-Z])""").containsMatchIn(text))) {
       text = francoToArabic(text)
     }
 

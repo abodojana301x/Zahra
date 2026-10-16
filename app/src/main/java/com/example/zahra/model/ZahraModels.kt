@@ -6,6 +6,13 @@ enum class ConfidenceTier {
   UNCERTAIN  // < 0.40
 }
 
+enum class OutcomeState {
+  SUPPORTED,        // Evidence sufficient, validation satisfied, action succeeded
+  AMBIGUOUS,        // Ambiguous request or required details/fields missing
+  UNSUPPORTED,      // Not supported by current rules or evidence base; honest refusal
+  EXECUTION_ERROR   // Action attempted but failed or encountered an execution error
+}
+
 enum class Sender {
   USER,
   ZAHRA
@@ -18,13 +25,43 @@ enum class FactCategory(val labelAr: String, val descriptionAr: String) {
   INTERESTS("الاهتمامات", "المجالات والمشاريع المتابعة")
 }
 
+enum class MemorySource(val labelAr: String) {
+  USER_EXPLICIT("أمر صريح من المستخدم"),
+  INFERRED_OBSERVED("استنتاج من السياق"),
+  USER_UI_MANUAL("إدخال يدوي من الإعدادات")
+}
+
+sealed interface MemorySaveResult {
+  data class Success(
+    val fact: ZahraUserFact,
+    val message: String,
+    val isUpdated: Boolean = false
+  ) : MemorySaveResult
+
+  data class ValidationFailed(
+    val reason: String
+  ) : MemorySaveResult
+
+  data class StorageFailed(
+    val reason: String,
+    val exception: Throwable? = null
+  ) : MemorySaveResult
+
+  data class VerificationFailed(
+    val reason: String
+  ) : MemorySaveResult
+}
+
 data class ZahraUserFact(
   val id: String = java.util.UUID.randomUUID().toString(),
   val category: FactCategory,
   val key: String,
   val value: String,
   val confidence: Double = 1.0,
-  val createdAt: Long = System.currentTimeMillis()
+  val source: MemorySource = MemorySource.USER_EXPLICIT,
+  val isConfirmed: Boolean = true,
+  val createdAt: Long = System.currentTimeMillis(),
+  val updatedAt: Long = System.currentTimeMillis()
 )
 
 sealed interface ZahraToolPayload {
@@ -108,6 +145,16 @@ data class ThinkingStep(
   val isCompleted: Boolean = true
 )
 
+enum class ReminderState(val labelAr: String) {
+  PENDING("قيد المعالجة"),
+  SCHEDULED("مجدول ومؤكد"),
+  DELIVERED("تم التسليم"),
+  COMPLETED("مكتمل"),
+  CANCELLED("ملغي"),
+  FAILED("فشل الجدولة"),
+  PERMISSION_REQUIRED("بانتظار الإذن")
+}
+
 data class ZahraSchedule(
   val id: String = java.util.UUID.randomUUID().toString(),
   val title: String,
@@ -118,7 +165,12 @@ data class ZahraSchedule(
   val isDaily: Boolean = true,
   val isEnabled: Boolean = true,
   val actionType: String = "REMINDER", // "REMINDER", "DAILY_MOTIVATION", "PRAYER_ALERT", "TASK_CHECK"
-  val createdAt: Long = System.currentTimeMillis()
+  val state: ReminderState = ReminderState.SCHEDULED,
+  val targetEpochMs: Long = 0L,
+  val lastDeliveredAt: Long? = null,
+  val failureReason: String? = null,
+  val createdAt: Long = System.currentTimeMillis(),
+  val updatedAt: Long = System.currentTimeMillis()
 )
 
 data class ZahraMessage(
@@ -128,6 +180,7 @@ data class ZahraMessage(
   val intent: String? = null,
   val confidence: Double = 1.0,
   val confidenceTier: ConfidenceTier = ConfidenceTier.DIRECT,
+  val outcomeState: OutcomeState = OutcomeState.SUPPORTED,
   val source: String? = null,
   val followups: List<String> = emptyList(),
   val toolPayload: ZahraToolPayload? = null,
@@ -158,6 +211,7 @@ data class ZahraResponse(
   val intent: String,
   val confidence: Double,
   val confidenceTier: ConfidenceTier,
+  val outcomeState: OutcomeState = OutcomeState.SUPPORTED,
   val source: String? = null,
   val followups: List<String> = emptyList(),
   val toolPayload: ZahraToolPayload? = null,

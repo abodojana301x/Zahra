@@ -18,9 +18,9 @@ object RegexMatcher {
     // 1. Math calculation
     PatternRule("calculate", Regex("^(?:احسب|كم\\s+يساوي|ناتج|calc(?:ulate)?)\\s+([0-9+\\-*/^().\\s%]+)", RegexOption.IGNORE_CASE), 0.98, 1),
     // 2. Unit conversion
-    PatternRule("convert_unit", Regex("^(?:حول|تحويل|convert)\\s+(.+?)\\s+(?:الى|إلى|to)\\s+(.+)", RegexOption.IGNORE_CASE), 0.95),
+    PatternRule("convert_unit", Regex("^(?:حول|تحويل|convert)\\s+(.+?)\\s+(?:الى|إلى|الي|to)\\s+(.+)", RegexOption.IGNORE_CASE), 0.95),
     // 3. Translation
-    PatternRule("translate", Regex("^(?:ترجم(?:لي)?|ما\\s+ترجمة|translate)\\s+(.+?)(?:\\s+(?:الى|إلى|to)\\s+(.+))?$", RegexOption.IGNORE_CASE), 0.95, 1),
+    PatternRule("translate", Regex("^(?:ترجم(?:لي)?|ما\\s+ترجمة|translate)\\s+(.+?)(?:\\s+(?:الى|إلى|الي|to)\\s+(.+))?$", RegexOption.IGNORE_CASE), 0.95, 1),
     // 4. Summarization
     PatternRule("summarize", Regex("^(?:لخص(?:لي)?|تلخيص|أعطني\\s+ملخص|summarize)\\s+(.+)", RegexOption.DOT_MATCHES_ALL), 0.95, 1),
     // 5. Note creation

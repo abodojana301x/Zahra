@@ -10,14 +10,43 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.example.MainActivity
 
+/**
+ * Android BroadcastReceiver for Zahra 3 alarms and system events:
+ * - Alarm triggering with duplicate delivery prevention
+ * - Device boot reconciliation (re-registers all alarms after reboot)
+ * - Clock / time-zone change reconciliation
+ */
 class ZahraAlarmReceiver : BroadcastReceiver() {
 
+  companion object {
+    const val ACTION_ALARM_TRIGGER = "com.example.zahra.ALARM_TRIGGER"
+  }
+
   override fun onReceive(context: Context, intent: Intent) {
-    val scheduleId = intent.getStringExtra("EXTRA_SCHEDULE_ID") ?: "zahra_sched"
-    val title = intent.getStringExtra("EXTRA_TITLE") ?: "تنبيه من وكيل زهرة 3"
+    val action = intent.action
+
+    // 1. Handle Device Reboot, Package Update, Clock or Timezone Changes
+    if (action == Intent.ACTION_BOOT_COMPLETED ||
+      action == Intent.ACTION_MY_PACKAGE_REPLACED ||
+      action == Intent.ACTION_TIME_CHANGED ||
+      action == Intent.ACTION_TIMEZONE_CHANGED
+    ) {
+      val scheduleEngine = ScheduleEngine(context)
+      scheduleEngine.reconcileSchedules()
+      return
+    }
+
+    // 2. Handle Alarm Trigger
+    val scheduleId = intent.getStringExtra("EXTRA_SCHEDULE_ID") ?: return
+    val title = intent.getStringExtra("EXTRA_TITLE") ?: "تنبيه من زهرة 3"
     val message = intent.getStringExtra("EXTRA_MESSAGE") ?: "حان موعد المهمة المجدولة المعتمدة."
 
-    showNotification(context, scheduleId.hashCode(), title, message)
+    val scheduleEngine = ScheduleEngine(context)
+    // Duplicate delivery prevention: Check with schedule engine before displaying
+    val shouldDeliver = scheduleEngine.onAlarmTriggered(scheduleId)
+    if (shouldDeliver) {
+      showNotification(context, scheduleId.hashCode(), title, message)
+    }
   }
 
   private fun showNotification(

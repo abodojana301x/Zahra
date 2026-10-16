@@ -1,25 +1,60 @@
 package com.example.zahra.engines
 
 import android.content.Context
+import com.example.zahra.core.ZahraNormalizer
+import com.example.zahra.model.OutcomeState
 import org.json.JSONObject
 import java.util.Calendar
+import java.util.Locale
 import kotlin.math.*
 
 data class RelAnswer(
   val text: String,
   val source: String,
   val confidence: Double,
-  val followups: List<String> = emptyList()
+  val outcomeState: OutcomeState = OutcomeState.SUPPORTED,
+  val followups: List<String> = emptyList(),
+  val matchedRecordId: String? = null
 )
 
 class ReligionEngine(context: Context) {
-  private data class QuranAyah(val surah: Int, val surahName: String, val ayah: Int, val text: String, val tafsir: String, val source: String)
-  private data class HadithEntry(val topic: String, val text: String, val isnad: String, val book: String, val grade: String, val explanation: String, val source: String)
-  private data class FiqhEntry(val question: String, val keywords: List<String>, val answer: String, val madhhab: String, val source: String)
+  data class QuranAyah(
+    val surah: Int,
+    val surahName: String,
+    val ayah: Int,
+    val text: String,
+    val tafsir: String,
+    val source: String
+  )
+
+  data class HadithEntry(
+    val id: String,
+    val topic: String,
+    val text: String,
+    val isnad: String,
+    val book: String,
+    val grade: String,
+    val explanation: String,
+    val source: String
+  )
+
+  data class FiqhEntry(
+    val question: String,
+    val keywords: List<String>,
+    val answer: String,
+    val madhhab: String,
+    val source: String
+  )
 
   private val quranList = mutableListOf<QuranAyah>()
   private val hadithList = mutableListOf<HadithEntry>()
   private val fiqhList = mutableListOf<FiqhEntry>()
+
+  private val arabicStopWords = setOf(
+    "ما", "هو", "هي", "عن", "في", "من", "إلى", "على", "هل", "قال",
+    "حديث", "احاديث", "أحاديث", "النبي", "رسول", "الله", "صلى", "وسلم",
+    "اريد", "أريد", "اعطني", "أعطني", "اذكر", "أذكر", "لي"
+  )
 
   init {
     try {
@@ -32,12 +67,12 @@ class ReligionEngine(context: Context) {
           val obj = qArray.getJSONObject(i)
           quranList.add(
             QuranAyah(
-              obj.optInt("surah"),
-              obj.optString("surah_name"),
-              obj.optInt("ayah"),
-              obj.optString("text"),
-              obj.optString("tafsir"),
-              obj.optString("source")
+              surah = obj.optInt("surah"),
+              surahName = obj.optString("surah_name"),
+              ayah = obj.optInt("ayah"),
+              text = obj.optString("text"),
+              tafsir = obj.optString("tafsir"),
+              source = obj.optString("source")
             )
           )
         }
@@ -49,13 +84,14 @@ class ReligionEngine(context: Context) {
           val obj = hArray.getJSONObject(i)
           hadithList.add(
             HadithEntry(
-              obj.optString("topic"),
-              obj.optString("text"),
-              obj.optString("isnad"),
-              obj.optString("book"),
-              obj.optString("grade"),
-              obj.optString("explanation"),
-              obj.optString("source")
+              id = obj.optString("id", "hadith_${i + 1}"),
+              topic = obj.optString("topic"),
+              text = obj.optString("text"),
+              isnad = obj.optString("isnad"),
+              book = obj.optString("book"),
+              grade = obj.optString("grade"),
+              explanation = obj.optString("explanation"),
+              source = obj.optString("source")
             )
           )
         }
@@ -72,11 +108,11 @@ class ReligionEngine(context: Context) {
           }
           fiqhList.add(
             FiqhEntry(
-              obj.optString("question"),
-              kwList,
-              obj.optString("answer"),
-              obj.optString("madhhab"),
-              obj.optString("source")
+              question = obj.optString("question"),
+              keywords = kwList,
+              answer = obj.optString("answer"),
+              madhhab = obj.optString("madhhab"),
+              source = obj.optString("source")
             )
           )
         }
@@ -86,68 +122,249 @@ class ReligionEngine(context: Context) {
     }
   }
 
+  fun getHadithEntries(): List<HadithEntry> = hadithList.toList()
+  fun getQuranEntries(): List<QuranAyah> = quranList.toList()
+  fun getFiqhEntries(): List<FiqhEntry> = fiqhList.toList()
+
   fun query(query: String): RelAnswer {
-    val clean = query.trim().lowercase()
+    val clean = query.trim()
+    val normalized = ZahraNormalizer.normalize(clean)
 
     // 1. Qibla request
-    if (clean.contains("قبلة") || clean.contains("اتجاه القبلة") || clean.contains("qibla")) {
-      return calculateQibla(24.7136, 46.6753) // Riyadh default (24.7N, 46.7E)
+    if (normalized.contains("قبلة") || normalized.contains("اتجاه القبلة") || normalized.contains("qibla")) {
+      return calculateQibla(24.7136, 46.6753)
     }
 
     // 2. Prayer times request
-    if (clean.contains("صلاة") || clean.contains("أذان") || clean.contains("مواقيت") || clean.contains("فجر") || clean.contains("عصر")) {
+    if (normalized.contains("صلاة") || normalized.contains("أذان") || normalized.contains("اذان") ||
+        normalized.contains("مواقيت") || normalized.contains("فجر") || normalized.contains("عصر")) {
       return calculatePrayerTimes(24.7136, 46.6753, 3)
     }
 
-    // 3. Fiqh Q&A
-    for (f in fiqhList) {
-      if (f.keywords.any { clean.contains(it) }) {
-        return RelAnswer(
-          text = "السؤال: ${f.question}\n\nالجواب: ${f.answer}\n\nالمذهب المعتمد: ${f.madhhab}",
-          source = f.source,
-          confidence = 0.95,
-          followups = listOf("أركان الوضوء", "نواقض الوضوء", "سجود السهو")
-        )
-      }
+    // 3. Hadith Authenticity Query (Explicit check to prevent fabricating grades or narrators)
+    val isAuthenticityQuery = normalized.contains("صحة حديث") || normalized.contains("هل حديث") ||
+                              normalized.contains("درجة صحة") || normalized.contains("تخريج حديث") ||
+                              normalized.contains("هل هذا حديث صحيح")
+    if (isAuthenticityQuery) {
+      return handleAuthenticityQuery(clean, normalized)
     }
 
-    // 4. Quran
-    for (q in quranList) {
-      if (clean.contains(q.surahName) || clean.contains("الكرسي") || clean.contains("الفاتحة") || clean.contains("الإخلاص")) {
-        return RelAnswer(
-          text = "قال تعالى في سورة ${q.surahName} (آية ${q.ayah}):\n\n\"${q.text}\"\n\nالتفسير:\n${q.tafsir}",
-          source = q.source,
-          confidence = 0.98,
-          followups = listOf("تفسير آية أخرى", "أحاديث نبوية")
-        )
-      }
+    // 4. Hadith Query by Topic or Content
+    if (normalized.contains("حديث") || normalized.contains("قال رسول") || normalized.contains("الرسول")) {
+      val hadithRes = searchHadith(normalized)
+      if (hadithRes != null) return hadithRes
     }
 
-    // 5. Hadith
-    for (h in hadithList) {
-      if (clean.contains("نية") || clean.contains("أعمال") || clean.contains("خلق") || clean.contains("يسروا") || clean.contains("علم") || clean.contains("حديث")) {
-        return RelAnswer(
-          text = "عن ${h.isnad} قال: قال رسول الله ﷺ:\n\n\"${h.text}\"\n\nالتخريج: ${h.book} (${h.grade})\nالشرح: ${h.explanation}",
-          source = h.source,
-          confidence = 0.96
-        )
-      }
+    // 5. Quran Query
+    if (normalized.contains("قرآن") || normalized.contains("قران") || normalized.contains("سورة") ||
+        normalized.contains("سوره") || normalized.contains("آية") || normalized.contains("ايه") ||
+        normalized.contains("تفسير") || normalized.contains("الكرسي") || normalized.contains("الفاتحة")) {
+      val quranRes = searchQuran(normalized)
+      if (quranRes != null) return quranRes
     }
 
-    // Fallback: Strict honesty
+    // 6. Fiqh Query
+    val fiqhRes = searchFiqh(normalized)
+    if (fiqhRes != null) return fiqhRes
+
+    // 7. General Hadith Topic search if no specific category matched
+    val generalHadithRes = searchHadith(normalized)
+    if (generalHadithRes != null) return generalHadithRes
+
+    // Fallback: Honest refusal without guessing or fabricating
     return RelAnswer(
-      text = "مش عندي إجابة موثوقة لهذه المسألة الشرعية في قواعد البيانات المدمجة. يُرجى مراجعة كتب الفقه المعتمدة أو سؤال أهل العلم الموثوقين.",
+      text = "المسألة الشرعية أو النص المطلوب غير مسجل في قواعد البيانات المعتمدة المدمجة بزهرة. يمتنع المساعد تماماً عن التخمين في الأمور الشرعية، ويُرجى مراجعة المصادر الفقهية المعتمدة.",
       source = "قيد الأمان الشرعي لزهرة (لا تخمين في الدين)",
       confidence = 0.25,
+      outcomeState = OutcomeState.UNSUPPORTED,
       followups = listOf("أركان الوضوء", "نواقض الوضوء", "مواقيت الصلاة", "اتجاه القبلة")
     )
+  }
+
+  private fun handleAuthenticityQuery(rawQuery: String, normalized: String): RelAnswer {
+    val queryTokens = extractSignificantTokens(normalized)
+    var bestMatch: HadithEntry? = null
+    var bestTextOverlap = 0
+
+    for (h in hadithList) {
+      val hTextNorm = ZahraNormalizer.normalize(h.text)
+      var overlap = 0
+      for (qt in queryTokens) {
+        if (hTextNorm.contains(qt)) overlap++
+      }
+      // Require at least 2 distinct words from the actual hadith text
+      if (overlap >= 2 && overlap > bestTextOverlap) {
+        bestTextOverlap = overlap
+        bestMatch = h
+      }
+    }
+
+    if (bestMatch != null) {
+      val h = bestMatch
+      return RelAnswer(
+        text = "حكم وتخريج الحديث:\n\n• النص: \"${h.text}\"\n• الراوي: ${h.isnad}\n• التخريج: ${h.book}\n• الدرجة والحكم: ${h.grade}\n\nالشرح المختصر: ${h.explanation}",
+        source = h.source,
+        confidence = 0.98,
+        outcomeState = OutcomeState.SUPPORTED,
+        matchedRecordId = h.id,
+        followups = listOf("شرح الحديث", "حديث آخر في نفس الباب")
+      )
+    }
+
+    return RelAnswer(
+      text = "هذا الحديث غير مسجل في قاعدة الأحاديث المحققة المدمجة بزهرة. يمتنع النظام عن الحكم على صحة الأحاديث أو تخريجها بدون سند موثق في قواعده منعاً للخطأ والافتراء على رسول الله ﷺ.",
+      source = "مبدأ الأمان التوثيقي لزهرة (Truth Before Intelligence)",
+      confidence = 0.30,
+      outcomeState = OutcomeState.UNSUPPORTED,
+      followups = listOf("حديث عن النية", "حديث عن طلب العلم", "حديث عن حسن الخلق")
+    )
+  }
+
+  private fun searchHadith(normalizedQuery: String): RelAnswer? {
+    val best = findBestHadithMatch(normalizedQuery) ?: return null
+    val (h, score) = best
+
+    if (score < 0.30) {
+      return null
+    }
+
+    return RelAnswer(
+      text = "عن ${h.isnad} قال: قال رسول الله ﷺ:\n\n\"${h.text}\"\n\nالتخريج: ${h.book} (${h.grade})\nالشرح: ${h.explanation}",
+      source = h.source,
+      confidence = min(0.98, score + 0.3),
+      outcomeState = OutcomeState.SUPPORTED,
+      matchedRecordId = h.id,
+      followups = listOf("شرح الحديث", "أحاديث أخرى في ${h.topic}")
+    )
+  }
+
+  private fun findBestHadithMatch(normalizedQuery: String): Pair<HadithEntry, Double>? {
+    val queryTokens = extractSignificantTokens(normalizedQuery)
+    if (queryTokens.isEmpty() && !normalizedQuery.contains("حديث")) return null
+
+    var bestMatch: HadithEntry? = null
+    var bestScore = 0.0
+
+    for (h in hadithList) {
+      val hTopicNorm = ZahraNormalizer.normalize(h.topic)
+      val hTextNorm = ZahraNormalizer.normalize(h.text)
+      val hExplNorm = ZahraNormalizer.normalize(h.explanation)
+
+      var score = 0.0
+
+      for (qt in queryTokens) {
+        if (hTopicNorm.contains(qt)) score += 0.45
+        if (hTextNorm.contains(qt)) score += 0.35
+        if (hExplNorm.contains(qt)) score += 0.20
+      }
+
+      // Keyword phrase matches
+      if (h.id == "hadith_1" && (normalizedQuery.contains("نيه") || normalizedQuery.contains("اعمال"))) score += 0.5
+      if (h.id == "hadith_2" && (normalizedQuery.contains("خلق") || normalizedQuery.contains("يحب لاخيه"))) score += 0.5
+      if (h.id == "hadith_3" && (normalizedQuery.contains("يسروا") || normalizedQuery.contains("تيسير") || normalizedQuery.contains("سماحه") || normalizedQuery.contains("رفق"))) score += 0.5
+      if (h.id == "hadith_4" && (normalizedQuery.contains("طلب العلم") || normalizedQuery.contains("سلك طريقا") || (normalizedQuery.contains("علم") && !normalizedQuery.contains("الصين")))) score += 0.5
+      if (h.id == "hadith_5" && (normalizedQuery.contains("لسان") || normalizedQuery.contains("كف الاذى") || normalizedQuery.contains("سلم المسلمون"))) score += 0.5
+
+      if (score > bestScore) {
+        bestScore = score
+        bestMatch = h
+      }
+    }
+
+    return if (bestMatch != null && bestScore > 0.0) Pair(bestMatch, min(1.0, bestScore)) else null
+  }
+
+  private fun searchQuran(normalizedQuery: String): RelAnswer? {
+    var bestMatch: QuranAyah? = null
+    var bestScore = 0.0
+
+    for (q in quranList) {
+      val surahNorm = ZahraNormalizer.normalize(q.surahName)
+      val textNorm = ZahraNormalizer.normalize(q.text)
+
+      var score = 0.0
+      if (normalizedQuery.contains(surahNorm)) score += 0.6
+      if (q.surah == 2 && q.ayah == 255 && normalizedQuery.contains("الكرسي")) score += 0.9
+      if (q.surah == 1 && normalizedQuery.contains("فاتحة") || normalizedQuery.contains("الفاتحة")) score += 0.7
+      if (q.surah == 112 && (normalizedQuery.contains("اخلاص") || normalizedQuery.contains("الإخلاص") || normalizedQuery.contains("قل هو الله احد"))) score += 0.8
+      if (q.surah == 94 && (normalizedQuery.contains("شرح") || normalizedQuery.contains("الشرح") || normalizedQuery.contains("مع العسر يسرا"))) score += 0.8
+      if (q.surah == 103 && (normalizedQuery.contains("عصر") || normalizedQuery.contains("العصر") || normalizedQuery.contains("لفي خسر"))) score += 0.8
+
+      val tokens = extractSignificantTokens(normalizedQuery)
+      for (t in tokens) {
+        if (textNorm.contains(t)) score += 0.3
+      }
+
+      if (score > bestScore) {
+        bestScore = score
+        bestMatch = q
+      }
+    }
+
+    if (bestMatch != null && bestScore >= 0.40) {
+      return RelAnswer(
+        text = "قال تعالى في سورة ${bestMatch.surahName} (آية ${bestMatch.ayah}):\n\n\"${bestMatch.text}\"\n\nالتفسير المعتمد:\n${bestMatch.tafsir}",
+        source = bestMatch.source,
+        confidence = 0.98,
+        outcomeState = OutcomeState.SUPPORTED,
+        followups = listOf("تفسير آية أخرى", "أحاديث نبوية موثقة")
+      )
+    }
+
+    return null
+  }
+
+  private fun searchFiqh(normalizedQuery: String): RelAnswer? {
+    var bestMatch: FiqhEntry? = null
+    var bestScore = 0.0
+
+    val queryTokens = extractSignificantTokens(normalizedQuery)
+
+    for (f in fiqhList) {
+      var score = 0.0
+      val qNorm = ZahraNormalizer.normalize(f.question)
+
+      for (kw in f.keywords) {
+        val kwNorm = ZahraNormalizer.normalize(kw)
+        if (normalizedQuery.contains(kwNorm)) {
+          score += 0.5
+        }
+      }
+
+      for (t in queryTokens) {
+        if (qNorm.contains(t)) score += 0.25
+      }
+
+      if (score > bestScore) {
+        bestScore = score
+        bestMatch = f
+      }
+    }
+
+    if (bestMatch != null && bestScore >= 0.40) {
+      return RelAnswer(
+        text = "المسألة الفقهية: ${bestMatch.question}\n\nالحكم: ${bestMatch.answer}\n\nالمذهب المعتمد: ${bestMatch.madhhab}",
+        source = bestMatch.source,
+        confidence = 0.95,
+        outcomeState = OutcomeState.SUPPORTED,
+        followups = listOf("أركان الوضوء", "نواقض الوضوء", "سجود السهو")
+      )
+    }
+
+    return null
+  }
+
+  private fun extractSignificantTokens(text: String): List<String> {
+    return text.split(Regex("[\\s،.,؛!?؟:()\"\\[\\]]+"))
+      .map { it.trim() }
+      .filter { it.length > 2 && it !in arabicStopWords }
   }
 
   fun calculateQibla(lat: Double, lon: Double): RelAnswer {
     val lat1 = Math.toRadians(lat)
     val lon1 = Math.toRadians(lon)
-    val lat2 = Math.toRadians(21.4225) // Kaaba
-    val lon2 = Math.toRadians(39.8262)
+    val lat2 = Math.toRadians(21.4225) // Kaaba latitude
+    val lon2 = Math.toRadians(39.8262) // Kaaba longitude
 
     val dLon = lon2 - lon1
     val y = sin(dLon)
@@ -157,9 +374,10 @@ class ReligionEngine(context: Context) {
     qiblaDeg = (qiblaDeg + 360) % 360
 
     return RelAnswer(
-      text = "اتجاه القبلة المحسوب فلكياً: ${"%.1f".format(qiblaDeg)}° من الشمال الجغرافي باتجاه الكعبة المشرفة بمكة المكرمة.",
+      text = "اتجاه القبلة المحسوب فلكياً: ${"%.1f".format(Locale.US, qiblaDeg)}° من الشمال الجغرافي باتجاه الكعبة المشرفة بمكة المكرمة.",
       source = "حسابات الدائرة العظمى الفلكية (Great-Circle Formula: 21.4225°N, 39.8262°E)",
       confidence = 1.0,
+      outcomeState = OutcomeState.SUPPORTED,
       followups = listOf("مواقيت الصلاة اليوم", "أذكار الصباح والمساء")
     )
   }
@@ -199,6 +417,7 @@ class ReligionEngine(context: Context) {
       text = schedule,
       source = "الحساب الفلكي لموقع الشمس وميل الأرض (Astronomical Solar Equations)",
       confidence = 0.95,
+      outcomeState = OutcomeState.SUPPORTED,
       followups = listOf("اتجاه القبلة", "أركان الوضوء", "نواقض الوضوء")
     )
   }

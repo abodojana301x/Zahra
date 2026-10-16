@@ -343,6 +343,28 @@ private fun ScheduleListItem(
               modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
             )
           }
+
+          Spacer(modifier = Modifier.width(6.dp))
+
+          val (statusColor, statusBg) = when (schedule.state) {
+            com.example.zahra.model.ReminderState.SCHEDULED -> Color(0xFF10A37F) to Color(0xFF10A37F).copy(alpha = 0.15f)
+            com.example.zahra.model.ReminderState.PERMISSION_REQUIRED -> Color(0xFFF59E0B) to Color(0xFFF59E0B).copy(alpha = 0.15f)
+            com.example.zahra.model.ReminderState.DELIVERED -> Color(0xFF3B82F6) to Color(0xFF3B82F6).copy(alpha = 0.15f)
+            com.example.zahra.model.ReminderState.FAILED -> MaterialTheme.colorScheme.error to MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
+            else -> MaterialTheme.colorScheme.onSurfaceVariant to MaterialTheme.colorScheme.surfaceVariant
+          }
+          Surface(
+            color = statusBg,
+            shape = RoundedCornerShape(6.dp)
+          ) {
+            Text(
+              text = schedule.state.labelAr,
+              color = statusColor,
+              fontSize = 10.sp,
+              fontWeight = FontWeight.Medium,
+              modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+            )
+          }
         }
 
         Switch(

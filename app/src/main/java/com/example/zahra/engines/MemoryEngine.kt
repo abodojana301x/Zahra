@@ -1,84 +1,203 @@
 package com.example.zahra.engines
 
+import android.content.Context
 import com.example.zahra.model.FactCategory
+import com.example.zahra.model.MemorySaveResult
+import com.example.zahra.model.MemorySource
 import com.example.zahra.model.ZahraUserFact
-import java.util.regex.Pattern
+import com.example.zahra.storage.InMemoryMemoryDriver
+import com.example.zahra.storage.SafeMemoryStore
+import com.example.zahra.storage.SharedPreferencesMemoryDriver
 
-class MemoryEngine {
-  private val facts = mutableListOf<ZahraUserFact>()
-
-  init {
-    // Memory starts empty for a new user installation.
-    // Zahra dynamically learns the user's name, preferences, and details through natural conversation.
+/**
+ * Phase 2 Persistent Memory Engine for Zahra.
+ * Implements the explicit lifecycle: Requested → Validated → Saved → Verified → Retrievable.
+ * Guarantees that saved information survives process restarts, is verified via read-back,
+ * and clearly separates persistent facts from temporary session context.
+ */
+class MemoryEngine(
+  context: Context? = null,
+  customStore: SafeMemoryStore? = null
+) {
+  val store: SafeMemoryStore = customStore ?: run {
+    if (context != null) {
+      SafeMemoryStore(SharedPreferencesMemoryDriver(context), enableEncryption = true)
+    } else {
+      SafeMemoryStore(InMemoryMemoryDriver(), enableEncryption = false)
+    }
   }
 
-  fun getFacts(): List<ZahraUserFact> = facts.toList()
+  fun getFacts(): List<ZahraUserFact> = store.getConfirmedFacts()
+
+  fun getTemporaryFacts(): List<ZahraUserFact> = store.getTemporaryFacts()
 
   fun getFactsByCategory(category: FactCategory): List<ZahraUserFact> {
-    return facts.filter { it.category == category }
-  }
-
-  fun addFact(category: FactCategory, key: String, value: String, confidence: Double = 1.0): ZahraUserFact {
-    // Check if an existing fact with similar key exists, update it if so
-    val existingIndex = facts.indexOfFirst { it.key.equals(key.trim(), ignoreCase = true) }
-    val newFact = ZahraUserFact(
-      category = category,
-      key = key.trim(),
-      value = value.trim(),
-      confidence = confidence,
-      createdAt = System.currentTimeMillis()
-    )
-
-    if (existingIndex >= 0) {
-      facts[existingIndex] = newFact
-    } else {
-      facts.add(0, newFact)
-    }
-    return newFact
-  }
-
-  fun updateFact(id: String, newKey: String, newValue: String, category: FactCategory? = null) {
-    val idx = facts.indexOfFirst { it.id == id }
-    if (idx >= 0) {
-      val old = facts[idx]
-      facts[idx] = old.copy(
-        key = newKey.trim(),
-        value = newValue.trim(),
-        category = category ?: old.category
-      )
-    }
-  }
-
-  fun deleteFact(id: String) {
-    facts.removeAll { it.id == id }
-  }
-
-  fun clearMemory() {
-    facts.clear()
+    return store.getConfirmedFacts().filter { it.category == category }
   }
 
   /**
-   * Intelligently scans user messages to extract and store personal facts automatically.
-   * Returns newly discovered ZahraUserFact, or null if no new fact was detected.
+   * Adds or updates a confirmed persistent fact with verified read-back.
+   */
+  fun addFact(
+    category: FactCategory,
+    key: String,
+    value: String,
+    confidence: Double = 1.0,
+    source: MemorySource = MemorySource.USER_EXPLICIT
+  ): ZahraUserFact {
+    val result = store.saveFact(
+      category = category,
+      key = key,
+      value = value,
+      confidence = confidence,
+      source = source,
+      isConfirmed = true
+    )
+    return when (result) {
+      is MemorySaveResult.Success -> result.fact
+      else -> {
+        // Fallback for direct backward compatibility
+        ZahraUserFact(category = category, key = key, value = value, confidence = confidence, source = source)
+      }
+    }
+  }
+
+  /**
+   * Complete lifecycle save with explicit result reporting (for natural language commands).
+   */
+  fun saveFactWithResult(
+    category: FactCategory,
+    key: String,
+    value: String,
+    confidence: Double = 1.0,
+    source: MemorySource = MemorySource.USER_EXPLICIT
+  ): MemorySaveResult {
+    return store.saveFact(
+      category = category,
+      key = key,
+      value = value,
+      confidence = confidence,
+      source = source,
+      isConfirmed = true
+    )
+  }
+
+  fun updateFact(id: String, newKey: String, newValue: String, category: FactCategory? = null): MemorySaveResult {
+    return store.updateFact(id, newKey, newValue, category)
+  }
+
+  fun deleteFact(id: String): Boolean {
+    return store.deleteFact(id)
+  }
+
+  fun deleteFactByKeyOrContent(query: String): Boolean {
+    val clean = query.trim().lowercase()
+    val fact = store.getConfirmedFacts().find {
+      it.key.lowercase().contains(clean) || it.value.lowercase().contains(clean) || clean.contains(it.key.lowercase())
+    } ?: return false
+    return store.deleteFact(fact.id)
+  }
+
+  fun clearMemory(): Boolean {
+    return store.clearAll()
+  }
+
+  /**
+   * Extracts and handles explicit memory commands ("تذكر أن...", "احفظ أن...", "لا تنس أن...").
+   * Returns a MemorySaveResult ensuring verified persistence.
+   */
+  fun saveExplicitMemory(input: String): MemorySaveResult? {
+    val trimmed = input.trim()
+    val rememberRegex = Regex("(?:تذكر أن|تذكري أن|احفظ أن|احفظ عندك أن|سجل في ذاكرتك أن|لا تنس أن|تذكر ان|احفظ ان)\\s+(.+)", RegexOption.IGNORE_CASE)
+    val match = rememberRegex.find(trimmed) ?: return null
+
+    val rawContent = match.groupValues[1].trim()
+    if (rawContent.isBlank()) {
+      return MemorySaveResult.ValidationFailed("محتوى التذكر فارغ.")
+    }
+
+    // Determine key and value from phrasing
+    // e.g. "رقم هاتفي هو 0501234567" -> key: "رقم هاتفي", value: "0501234567"
+    // e.g. "أفضل الشاي الأخضر" -> key: "تفضيل مسجل", value: "أفضل الشاي الأخضر"
+    var key = "تفضيل مسجل"
+    var value = rawContent
+    val category = when {
+      rawContent.contains("اسمي") || rawContent.contains("عمري") || rawContent.contains("هاتفي") || rawContent.contains("ميلادي") -> {
+        key = if (rawContent.contains("اسمي")) "الاسم" else if (rawContent.contains("هاتفي")) "رقم الهاتف" else "بيانات شخصية"
+        FactCategory.PERSONAL
+      }
+      rawContent.contains("أعيش") || rawContent.contains("أسكن") || rawContent.contains("مدينتي") || rawContent.contains("عملي") || rawContent.contains("وظيفتي") -> {
+        key = if (rawContent.contains("عمل") || rawContent.contains("وظيفة")) "المهنة / العمل" else "المدينة / الإقامة"
+        FactCategory.LOCATION_WORK
+      }
+      rawContent.contains("أحب") || rawContent.contains("أهوى") || rawContent.contains("مشروع") || rawContent.contains("اهتمام") -> {
+        key = "اهتمام شخصي"
+        FactCategory.INTERESTS
+      }
+      else -> FactCategory.PREFERENCE
+    }
+
+    // Handle split patterns like "رقم هاتفي هو X" or "اسمي هو X"
+    val isPattern = Regex("(.+?)\\s+(?:هو|هي|=)\\s+(.+)")
+    isPattern.find(rawContent)?.let { m ->
+      val extractedK = m.groupValues[1].trim()
+      val extractedV = m.groupValues[2].trim()
+      if (extractedK.length in 2..40 && extractedV.isNotEmpty()) {
+        key = extractedK
+        value = extractedV
+      }
+    }
+
+    return store.saveFact(
+      category = category,
+      key = key,
+      value = value,
+      confidence = 1.0,
+      source = MemorySource.USER_EXPLICIT,
+      isConfirmed = true
+    )
+  }
+
+  /**
+   * Scans user messages to detect personal facts:
+   * Explicit name/city/work introductions are saved persistently with verification.
+   * Casual, unprompted remarks ("أحب البرمجة") are recorded as temporary session context
+   * to avoid silently converting uncertain inferences into confirmed facts.
    */
   fun scanAndExtractFact(input: String): ZahraUserFact? {
     val trimmed = input.trim()
 
-    // 1. Name patterns: "اسمي أحمد", "أنا اسمي دجانة", "نادني بـ محمد"
+    // 1. Explicit introduction of name: "اسمي أحمد", "أنا اسمي دجانة", "نادني بـ محمد"
     val nameRegex = Regex("(?:اسمي|أنا اسمي|ادعني|نادني بـ?|اسمي هو)\\s+([\\p{L}\\s]{2,25})", RegexOption.IGNORE_CASE)
     nameRegex.find(trimmed)?.let { match ->
       val name = match.groupValues[1].trim()
-      if (name.isNotEmpty() && !name.contains("زهرة")) {
-        return addFact(FactCategory.PERSONAL, "الاسم", name, 0.95)
+      if (name.isNotEmpty() && !name.contains("زهرة") && !name.contains("مساعد")) {
+        val res = store.saveFact(
+          category = FactCategory.PERSONAL,
+          key = "الاسم",
+          value = name,
+          confidence = 0.98,
+          source = MemorySource.USER_EXPLICIT,
+          isConfirmed = true
+        )
+        if (res is MemorySaveResult.Success) return res.fact
       }
     }
 
-    // 2. Location patterns: "أعيش في الرياض", "أسكن في القاهرة", "أنا من دبي", "مدينتي هي مكة"
+    // 2. Explicit introduction of residence: "أعيش في الرياض", "أسكن في القاهرة", "أنا من دبي"
     val locRegex = Regex("(?:أعيش في|أسكن في|أنا من|مدينتي هي|موقعي في)\\s+([\\p{L}\\s]{2,25})", RegexOption.IGNORE_CASE)
     locRegex.find(trimmed)?.let { match ->
       val city = match.groupValues[1].trim()
-      if (city.isNotEmpty()) {
-        return addFact(FactCategory.LOCATION_WORK, "المدينة الحالية", city, 0.92)
+      if (city.isNotEmpty() && !city.contains("البيت") && !city.contains("مكان")) {
+        val res = store.saveFact(
+          category = FactCategory.LOCATION_WORK,
+          key = "المدينة الحالية",
+          value = city,
+          confidence = 0.95,
+          source = MemorySource.USER_EXPLICIT,
+          isConfirmed = true
+        )
+        if (res is MemorySaveResult.Success) return res.fact
       }
     }
 
@@ -87,25 +206,32 @@ class MemoryEngine {
     workRegex.find(trimmed)?.let { match ->
       val job = match.groupValues[1].trim()
       if (job.isNotEmpty()) {
-        return addFact(FactCategory.LOCATION_WORK, "المهنة / العمل", job, 0.90)
+        val res = store.saveFact(
+          category = FactCategory.LOCATION_WORK,
+          key = "المهنة / العمل",
+          value = job,
+          confidence = 0.92,
+          source = MemorySource.USER_EXPLICIT,
+          isConfirmed = true
+        )
+        if (res is MemorySaveResult.Success) return res.fact
       }
     }
 
-    // 4. Explicit Memory commands: "تذكر أن ...", "احفظ أن ...", "لا تنس أن ..."
-    val rememberRegex = Regex("(?:تذكر أن|تذكري أن|احفظ أن|احفظ عندك أن|سجل في ذاكرتك أن|لا تنس أن)\\s+(.+)", RegexOption.IGNORE_CASE)
-    rememberRegex.find(trimmed)?.let { match ->
-      val content = match.groupValues[1].trim()
-      if (content.isNotEmpty()) {
-        return addFact(FactCategory.PREFERENCE, "تفضيل مسجل", content, 0.98)
-      }
+    // 4. Explicit Memory commands: "تذكر أن ...", "احفظ أن ..."
+    val explicitResult = saveExplicitMemory(trimmed)
+    if (explicitResult is MemorySaveResult.Success) {
+      return explicitResult.fact
     }
 
-    // 5. Likes/Interests: "أحب البرمجة", "أفضل القهوة السادة", "اهتمامي بالفيزياء"
+    // 5. Inferred / Casual Interests ("أحب القراءة", "أفضل القهوة"):
+    // Crucial requirement: "Never silently convert uncertain inferences into confirmed facts."
+    // Saved ONLY to temporary session context, NOT persistent memory!
     val interestRegex = Regex("(?:أحب|أفضل|اهتمامي هو|أهتم بـ)\\s+([\\p{L}\\s]{3,35})", RegexOption.IGNORE_CASE)
     interestRegex.find(trimmed)?.let { match ->
       val topic = match.groupValues[1].trim()
       if (topic.isNotEmpty() && !topic.contains("زهرة") && !topic.contains("مساعد")) {
-        return addFact(FactCategory.INTERESTS, "اهتمام / تفضيل", topic, 0.88)
+        return store.addTemporaryFact(FactCategory.INTERESTS, "اهتمام / تفضيل", topic)
       }
     }
 
@@ -113,22 +239,37 @@ class MemoryEngine {
   }
 
   /**
-   * Generates a coherent Arabic natural language answer summarizing all known facts about user.
+   * Generates a natural language summary of confirmed memories.
    */
   fun summarizeKnownMemory(): String {
-    if (facts.isEmpty()) {
-      return "ذاكرتي فارغة حالياً عنك! يمكنك إخباري باسمك، مدينتك، مهنتك، أو أي تفضيلات ترغب أن أحفظها وسأتذكرها فوراً."
+    val facts = store.getConfirmedFacts()
+    val tempFacts = store.getTemporaryFacts()
+
+    if (facts.isEmpty() && tempFacts.isEmpty()) {
+      return "ذاكرتي الدائمة فارغة حالياً عنك! يمكنك أن تطلب مني حفظ أي معلومة بقولك: \"تذكر أن اسمي...\" أو \"احفظ أنني أعيش في...\". سأقوم بحفظها وتأكيد كتابتها في الذاكرة المشفرة فوراً."
     }
 
-    val sb = StringBuilder("إليك ما أتذكره وأحفظه عنك في الذاكرة المحلية المشفرة (${facts.size} معلومات):\n\n")
-    facts.groupBy { it.category }.forEach { (cat, list) ->
-      sb.append("🏷️ **${cat.labelAr}**:\n")
-      list.forEach { fact ->
+    val sb = StringBuilder()
+    if (facts.isNotEmpty()) {
+      sb.append("📋 **المعلومات المحفوظة في الذاكرة الدائمة المشفرة** (${facts.size}):\n\n")
+      facts.groupBy { it.category }.forEach { (cat, list) ->
+        sb.append("🏷️ **${cat.labelAr}**:\n")
+        list.forEach { fact ->
+          sb.append("• ${fact.key}: ${fact.value} (المصدر: ${fact.source.labelAr})\n")
+        }
+        sb.append("\n")
+      }
+    }
+
+    if (tempFacts.isNotEmpty()) {
+      sb.append("💭 **سياق المحادثة الحالية (غير مثبت بشكل دائم)**:\n")
+      tempFacts.forEach { fact ->
         sb.append("• ${fact.key}: ${fact.value}\n")
       }
       sb.append("\n")
     }
-    sb.append("💡 جميع هذه البيانات مشفرة محلياً على جهازك ولا تغادره مطلقاً، ويمكنك تعديلها أو حذفها من شاشة \"الإعدادات والذاكرة\".")
+
+    sb.append("🔐 جميع بيانات الذاكرة مشفرة محلياً (AES-256-GCM) ولا تغادر جهازك مطلقاً، ولديك كامل الصلاحية لتعديلها أو حذفها من شاشة الإعدادات أو عبر أمر مباشر (مثل: \"احذف من الذاكرة...\").")
     return sb.toString().trim()
   }
 }

@@ -13,14 +13,16 @@ class ZahraRouter(private val context: Context) {
   val nbClassifier = NaiveBayesClassifier()
   val translationEngine = TranslationEngine(context)
   val religionEngine = ReligionEngine(context)
-  val taskEngine = TaskEngine()
-  val noteEngine = NoteEngine()
-  val memoryEngine = MemoryEngine()
+  val taskEngine = TaskEngine(context)
+  val noteEngine = NoteEngine(context)
+  val memoryEngine = MemoryEngine(context)
   val localImageEngine = LocalImageEngine()
   val scheduleEngine = ScheduleEngine(context)
 
   init {
     loadTrainingCorpus()
+    // Reconcile pending reminders and alarms on initialization
+    scheduleEngine.reconcileSchedules()
   }
 
   private fun loadTrainingCorpus() {
@@ -61,13 +63,80 @@ class ZahraRouter(private val context: Context) {
         intent = "query_memory",
         confidence = 0.99,
         confidenceTier = ConfidenceTier.DIRECT,
+        outcomeState = OutcomeState.SUPPORTED,
         source = "مستودع الذاكرة الذاتية المشفرة لزهرة 3",
         followups = listOf("تذكر أنني أفضل الشاي", "ما هي مواقيت الصلاة؟", "أضف مهمة جديدة"),
         toolPayload = firstFact?.let { ZahraToolPayload.MemoryFactPayload(it, isNew = false) }
       )
     }
 
-    // Auto-scan for personal facts to improve memory strength
+    // Check if user is asking to delete/forget a memory
+    val isForgetReq = normalized.contains("احذف من الذاكر") || normalized.contains("انس") ||
+      normalized.contains("امسح من الذاكر") || normalized.contains("احذف المعلوم")
+    if (isForgetReq) {
+      val query = clean.replace(Regex("(?:احذف من الذاكرة|انسَ أن|انس ان|امسح من الذاكرة|احذف المعلومة|احذف)\\s*", RegexOption.IGNORE_CASE), "").trim()
+      val deleted = memoryEngine.deleteFactByKeyOrContent(query)
+      return if (deleted) {
+        ZahraResponse(
+          text = "تم حذف المعلومة بنجاح من الذاكرة المحلية وتأكيد إزالتها نهائياً.",
+          intent = "forget_fact",
+          confidence = 0.98,
+          confidenceTier = ConfidenceTier.DIRECT,
+          outcomeState = OutcomeState.SUPPORTED,
+          source = "محرك الذاكرة الدائمة المعتمد لزهرة 3"
+        )
+      } else {
+        ZahraResponse(
+          text = "لم أجد معلومة مطابقة لما طلبت حذفه في الذاكرة الدائمة. يمكنك استعراض ذاكرتك الحالية بقول: \"ماذا تعرف عني؟\".",
+          intent = "forget_fact",
+          confidence = 0.85,
+          confidenceTier = ConfidenceTier.QUALIFIED,
+          outcomeState = OutcomeState.AMBIGUOUS,
+          source = "محرك الذاكرة الدائمة لزهرة 3"
+        )
+      }
+    }
+
+    // Explicit command to remember: "تذكر أن...", "احفظ أن...", "لا تنس أن..."
+    val explicitMemResult = memoryEngine.saveExplicitMemory(clean)
+    if (explicitMemResult != null) {
+      return when (explicitMemResult) {
+        is MemorySaveResult.Success -> {
+          ZahraResponse(
+            text = "تم حفظ المعلومة في الذاكرة وتأكيد تخزينها محلياً:\n• [${explicitMemResult.fact.category.labelAr}] ${explicitMemResult.fact.key}: \"${explicitMemResult.fact.value}\"\n\nالمعلومة مشفرة محلياً (AES-256) ومتاحة لك دائماً في شاشة \"الإعدادات والذاكرة\".",
+            intent = "remember_fact",
+            confidence = 0.99,
+            confidenceTier = ConfidenceTier.DIRECT,
+            outcomeState = OutcomeState.SUPPORTED,
+            source = "محرك الذاكرة الدائمة المعتمد لزهرة 3",
+            followups = listOf("ماذا تعرف عني؟", "أضف مهمة جديدة", "فكرني بموعد لاحق"),
+            toolPayload = ZahraToolPayload.MemoryFactPayload(explicitMemResult.fact, isNew = !explicitMemResult.isUpdated)
+          )
+        }
+        is MemorySaveResult.ValidationFailed -> {
+          ZahraResponse(
+            text = "لم أتمكن من حفظ المعلومة: ${explicitMemResult.reason}",
+            intent = "remember_fact",
+            confidence = 0.80,
+            confidenceTier = ConfidenceTier.QUALIFIED,
+            outcomeState = OutcomeState.AMBIGUOUS,
+            source = "مدقق صحة الذاكرة"
+          )
+        }
+        is MemorySaveResult.StorageFailed, is MemorySaveResult.VerificationFailed -> {
+          ZahraResponse(
+            text = "لم أتمكن من حفظ المعلومة في الذاكرة المحلية، لذلك لم أؤكد حفظها لضمان الصدق والموثوقية.",
+            intent = "remember_fact",
+            confidence = 0.90,
+            confidenceTier = ConfidenceTier.DIRECT,
+            outcomeState = OutcomeState.EXECUTION_ERROR,
+            source = "محرك الذاكرة الآمنة"
+          )
+        }
+      }
+    }
+
+    // Auto-scan for personal facts to improve memory strength (names, cities, jobs)
     val autoExtractedFact = memoryEngine.scanAndExtractFact(clean)
 
     // 1. Regex Command Matcher (Priority 1)
@@ -85,13 +154,14 @@ class ZahraRouter(private val context: Context) {
       confidence = nbScore.confidence
     }
 
-    // If an explicit fact was extracted, give acknowledgment
+    // If an explicit fact was extracted and general greeting/unknown, give acknowledgment
     if (autoExtractedFact != null && (intent == "unknown" || intent == "greet" || confidence < 0.45)) {
       return ZahraResponse(
         text = "حفظتُ ذلك في ذاكرتي المشفرة بدقة:\n• [${autoExtractedFact.category.labelAr}] ${autoExtractedFact.key}: \"${autoExtractedFact.value}\"\n\nيمكنك دائماً مراجعة وإدارة كل ما أحفظه عنك من تبويب \"الإعدادات والذاكرة\".",
         intent = "remember_fact",
         confidence = 0.98,
         confidenceTier = ConfidenceTier.DIRECT,
+        outcomeState = OutcomeState.SUPPORTED,
         source = "محرك الذاكرة الذاتية الدائم لزهرة 3",
         followups = listOf("ماذا تعرف عني؟", "أضف مهمة جديدة", "مواقيت الصلاة اليوم"),
         toolPayload = ZahraToolPayload.MemoryFactPayload(autoExtractedFact, isNew = true)
@@ -106,14 +176,23 @@ class ZahraRouter(private val context: Context) {
                      normalized.contains("فن") || normalized.contains("اجرائ")
     val effectiveIntent = if ((intent == "unknown" || confidence < 0.85) && isImageReq) "generate_image" else intent
 
+    // Direct check for cancel schedule keywords
+    val isCancelSched = normalized.contains("الغ التذكير") || normalized.contains("إلغاء التذكير") ||
+                        normalized.contains("احذف التذكير") || normalized.contains("الغ موعد") ||
+                        normalized.contains("احذف الموعد") || normalized.contains("وقف التذكير") ||
+                        normalized.contains("الغ منبه") || normalized.contains("احذف منبه")
+
     // Direct check for scheduling keywords if unclassified or low confidence
     val isSchedReq = normalized.contains("جدول") || normalized.contains("فكرني") || normalized.contains("ذكرني") ||
                      normalized.contains("نبهني") || normalized.contains("كل يوم") || normalized.contains("يومي") ||
                      normalized.contains("منبه") || normalized.contains("تذكير") || normalized.contains("schedule")
-    val finalIntent = if ((effectiveIntent == "unknown" || confidence < 0.85) && isSchedReq) "create_schedule" else effectiveIntent
+    val finalIntent = when {
+      isCancelSched -> "cancel_schedule"
+      (effectiveIntent == "unknown" || confidence < 0.85) && isSchedReq -> "create_schedule"
+      else -> effectiveIntent
+    }
 
-    // Ensure recognized intents have high confidence so they never hit fallback
-    if (finalIntent == "generate_image" || finalIntent == "create_schedule") {
+    if (finalIntent == "generate_image" || finalIntent == "create_schedule" || finalIntent == "cancel_schedule") {
       confidence = 0.98
     }
 
@@ -129,6 +208,7 @@ class ZahraRouter(private val context: Context) {
     var createdTask: ZahraTask? = null
     var createdNote: ZahraNote? = null
     var createdSchedule: ZahraSchedule? = null
+    var outcomeState: OutcomeState = OutcomeState.SUPPORTED
 
     when (finalIntent) {
       "generate_image" -> {
@@ -137,18 +217,44 @@ class ZahraRouter(private val context: Context) {
         responseText = "أنشأت لك هذه اللوحة الفنية التفاعلية محلياً:\n\"${imgPayload.title}\"\n\nيمكنك التبديل بين الأنماط (فن إجرائي، بطاقة اقتباس، وبكسل آرت) عبر الأزرار التفاعلية أدناه."
         source = "محرك الرسومات والفن الإجرائي المحلي لزهرة 3"
         confidence = 0.99
+        outcomeState = OutcomeState.SUPPORTED
         toolPayload = imgPayload
         followups = listOf("ارسم لي مشهد فضاء كوني", "صمم بطاقة اقتباس عربي", "ارسم بكسل آرت 8-bit")
       }
 
       "create_schedule" -> {
-        val schedule = scheduleEngine.parseAndCreateFromNaturalLanguage(rawInput)
-        createdSchedule = schedule
-        responseText = "تمت الجدولة بنجاح بواسطة الوكيل الذكي:\n• العنوان: ${schedule.title}\n• الوقت: ${schedule.timeDisplay}\n• التكرار: ${if (schedule.isDaily) "يومياً" else "مرة واحدة"}\n\nسيتم إطلاق إشعار حقيقي في الموعد عبر نظام أندرويد."
-        source = "محرك الجدولة والتنبيهات المعتمد لزهرة 3"
-        confidence = 0.98
-        toolPayload = ZahraToolPayload.SchedulePayload(schedule = schedule, isNew = true)
-        followups = listOf("اعرض المواعيد المجدولة", "فكرني كل يوم الساعة 8 صباحاً", "أضف مهمة جديدة")
+        // Enforce Phase 1 Rule: Validate fields before side-effect execution!
+        when (val schedVal = scheduleEngine.validateAndSchedule(rawInput)) {
+          is ScheduleValidationResult.Success -> {
+            createdSchedule = schedVal.schedule
+            responseText = schedVal.summary
+            source = "محرك الجدولة والتنبيهات المعتمد لزهرة 3"
+            confidence = 0.98
+            outcomeState = schedVal.outcomeState
+            toolPayload = ZahraToolPayload.SchedulePayload(schedule = schedVal.schedule, isNew = true)
+            followups = listOf("اعرض المواعيد المجدولة", "فكرني كل يوم الساعة 8 صباحاً", "أضف مهمة جديدة")
+          }
+          is ScheduleValidationResult.Ambiguous -> {
+            responseText = schedVal.message
+            source = "مدقق صحة المواعيد والجدولة (Zahra Validation Layer)"
+            confidence = 0.60
+            outcomeState = schedVal.outcomeState
+            followups = listOf("فكرني الساعة 5 مساءً", "ذكرني بعد 30 دقيقة", "فكرني بكرة الساعة 8 صباحاً")
+          }
+          is ScheduleValidationResult.Unsupported -> {
+            responseText = schedVal.message
+            source = "مدقق صحة المواعيد والجدولة (Zahra Validation Layer)"
+            confidence = 0.85
+            outcomeState = schedVal.outcomeState
+            followups = listOf("فكرني كل يوم الساعة 8 صباحاً", "ذكرني بعد ساعة")
+          }
+          is ScheduleValidationResult.ExecutionError -> {
+            responseText = schedVal.message
+            source = "محرك تنبيهات النظام"
+            confidence = 0.50
+            outcomeState = schedVal.outcomeState
+          }
+        }
       }
 
       "list_schedules" -> {
@@ -157,11 +263,36 @@ class ZahraRouter(private val context: Context) {
           "لا توجد مواعيد مجدولة حالياً. يمكنك أن تطلب مني: \"فكرني كل يوم الساعة 8 صباحاً بالأذكار\"."
         } else {
           "المواعيد والتنبيهات المجدولة (${schedules.size}):\n" +
-            schedules.joinToString("\n") { "⏰ [${it.timeDisplay}] ${it.title} (${if (it.isDaily) "يومي" else "مرة واحدة"})${if (it.isEnabled) " [مفعّل]" else " [معطل]"}" }
+            schedules.joinToString("\n") { "⏰ [${it.timeDisplay}] ${it.title} (${if (it.isDaily) "يومي" else "مرة واحدة"}) [الحالة: ${it.state.labelAr}]" }
         }
         source = "محرك الجدولة المحلي لزهرة 3"
+        outcomeState = OutcomeState.SUPPORTED
         if (schedules.isNotEmpty()) {
           toolPayload = ZahraToolPayload.SchedulePayload(schedules.first(), isNew = false)
+        }
+        followups = listOf("فكرني الساعة 5 مساءً", "احذف التذكير", "أضف مهمة جديدة")
+      }
+
+      "cancel_schedule" -> {
+        val cleanQuery = rawInput.replace(Regex("(?:الغ|إلغاء|احذف|حذف|امسح|وقف)\\s*(?:التذكير|المنبه|الموعد|موعد|تنبيه)?"), "").trim()
+        val allSchedules = scheduleEngine.getSchedules()
+        val target = if (cleanQuery.isNotBlank() && cleanQuery.length >= 2) {
+          allSchedules.find { it.title.contains(cleanQuery) || cleanQuery.contains(it.title) }
+        } else {
+          allSchedules.firstOrNull { it.isEnabled }
+        }
+
+        if (target != null) {
+          scheduleEngine.deleteSchedule(target.id)
+          responseText = "تم إلغاء التذكير وإلغاء المنبه المرتبط به في النظام بنجاح:\n• التذكير: ${target.title} (${target.timeDisplay})"
+          source = "محرك الجدولة والتنبيهات لزهرة 3"
+          outcomeState = OutcomeState.SUPPORTED
+          followups = listOf("اعرض المواعيد المجدولة", "فكرني كل يوم الساعة 8 صباحاً", "أضف مهمة جديدة")
+        } else {
+          responseText = "لم أجد موعداً أو تذكيراً مطابقاً لإلغائه. يمكنك مراجعة المواعيد المجدولة بقول: \"اعرض المواعيد المجدولة\"."
+          source = "محرك الجدولة والتنبيهات لزهرة 3"
+          outcomeState = OutcomeState.AMBIGUOUS
+          followups = listOf("اعرض المواعيد المجدولة", "فكرني بموعد لاحق")
         }
       }
 
@@ -171,6 +302,7 @@ class ZahraRouter(private val context: Context) {
         responseText = res.formattedText
         source = res.source
         confidence = res.confidence
+        outcomeState = res.outcomeState
         toolPayload = ZahraToolPayload.MathPayload(
           expression = mathExpr,
           result = res.formattedText,
@@ -184,6 +316,8 @@ class ZahraRouter(private val context: Context) {
           val res = MathEngine.convertUnit(parsed.value, parsed.fromUnit, parsed.toUnit)
           responseText = res.formattedText
           source = res.source
+          outcomeState = res.outcomeState
+          confidence = res.confidence
           toolPayload = ZahraToolPayload.MathPayload(
             expression = "${parsed.value} ${parsed.fromUnit} ➔ ${parsed.toUnit}",
             result = res.formattedText,
@@ -192,6 +326,8 @@ class ZahraRouter(private val context: Context) {
         } else {
           responseText = "يرجى تحديد القيمة والوحدة المراد التحويل منها وإليها (مثال: حول 10 كم إلى ميل أو حول 5 كيلو إلى باوند)."
           source = "محول الوحدات الفيزيائية"
+          outcomeState = OutcomeState.AMBIGUOUS
+          confidence = 0.50
         }
       }
 
@@ -202,6 +338,7 @@ class ZahraRouter(private val context: Context) {
         responseText = "الترجمة المعتمدة:\n\"${res.translatedText}\""
         source = res.source
         confidence = res.confidence
+        outcomeState = OutcomeState.SUPPORTED
         toolPayload = ZahraToolPayload.TranslatePayload(
           sourceText = toTrans,
           translatedText = res.translatedText,
@@ -212,17 +349,25 @@ class ZahraRouter(private val context: Context) {
 
       "summarize" -> {
         val toSum = regexMatch?.extractedCommand ?: normalized.replace(Regex("^(?:لخص|summarize)\\s+"), "")
-        val sumRes = SummarizeEngine.summarize(toSum)
-        val compression = ((1.0 - sumRes.compressionRatio) * 100).toInt()
-        responseText = "الملخص الاستخلاصي:\n${sumRes.summary}\n\n(نسبة الاختصار: $compression%)"
-        source = sumRes.source
-        toolPayload = ZahraToolPayload.SummarizePayload(
-          summary = sumRes.summary,
-          originalLength = toSum.length,
-          summaryLength = sumRes.summary.length,
-          compressionRatio = sumRes.compressionRatio,
-          bulletPoints = sumRes.keySentences
-        )
+        if (toSum.length < 20) {
+          responseText = "النص المدخل قصير جداً للتلخيص. يرجى إدخال فقرة تحتوي على جمل متعددة للحصول على ملخص استخلاصي دقيق."
+          source = "محرك التلخيص الاستخلاصي (TextRank)"
+          outcomeState = OutcomeState.AMBIGUOUS
+          confidence = 0.60
+        } else {
+          val sumRes = SummarizeEngine.summarize(toSum)
+          val compression = ((1.0 - sumRes.compressionRatio) * 100).toInt()
+          responseText = "الملخص الاستخلاصي:\n${sumRes.summary}\n\n(نسبة الاختصار: $compression%)"
+          source = sumRes.source
+          outcomeState = OutcomeState.SUPPORTED
+          toolPayload = ZahraToolPayload.SummarizePayload(
+            summary = sumRes.summary,
+            originalLength = toSum.length,
+            summaryLength = sumRes.summary.length,
+            compressionRatio = sumRes.compressionRatio,
+            bulletPoints = sumRes.keySentences
+          )
+        }
       }
 
       "ask_religion", "ask_prayer_time", "ask_quran", "ask_hadith" -> {
@@ -230,6 +375,7 @@ class ZahraRouter(private val context: Context) {
         responseText = relRes.text
         source = "[المصدر: ${relRes.source}]"
         confidence = relRes.confidence
+        outcomeState = relRes.outcomeState
         followups = relRes.followups
 
         val isPrayer = normalized.contains("صلاة") || normalized.contains("أذان") || normalized.contains("مواقيت") || normalized.contains("فجر")
@@ -271,6 +417,7 @@ class ZahraRouter(private val context: Context) {
         createdTask = task
         responseText = "تم حفظ المهمة بنجاح في جدول مهامك:\n• العنوان: ${task.title}\n• التصنيف: ${task.category}\n• الأولوية: ${task.priorityScore}/5${if (task.dueDate != null) "\n• الموعد: ${task.dueDate}" else ""}"
         source = "محرك المهام المحلي والذاكرة الآمنة"
+        outcomeState = OutcomeState.SUPPORTED
         toolPayload = ZahraToolPayload.TaskPayload(task)
       }
 
@@ -284,6 +431,7 @@ class ZahraRouter(private val context: Context) {
             tasks.joinToString("\n") { "${if (it.completed) "✅" else "⏳"} [${it.category}] ${it.title} (أولوية: ${it.priorityScore}/5)" }
         }
         source = "قاعدة بيانات المهام المحلية"
+        outcomeState = OutcomeState.SUPPORTED
         if (latest != null) {
           toolPayload = ZahraToolPayload.TaskPayload(latest)
         }
@@ -294,6 +442,7 @@ class ZahraRouter(private val context: Context) {
         createdNote = note
         responseText = "تم حفظ الملاحظة:\n\"${note.title}\"\n\nالوسوم المستخرجة تلقائياً: #${note.tags.joinToString(" #")}"
         source = "خوارزمية RAKE ومستودع الملاحظات المحلي"
+        outcomeState = OutcomeState.SUPPORTED
         toolPayload = ZahraToolPayload.NotePayload(note)
       }
 
@@ -307,6 +456,7 @@ class ZahraRouter(private val context: Context) {
             notes.joinToString("\n") { "📝 ${it.title} (وسوم: ${it.tags.joinToString(", ")})" }
         }
         source = "مستودع الملاحظات المحلي"
+        outcomeState = OutcomeState.SUPPORTED
         if (latestNote != null) {
           toolPayload = ZahraToolPayload.NotePayload(latestNote)
         }
@@ -317,12 +467,14 @@ class ZahraRouter(private val context: Context) {
         val greetingPrefix = if (userName.isNotBlank()) "أهلاً بك يا $userName! " else "وعليكم السلام ورحمة الله وبركاته! "
         responseText = "${greetingPrefix}أنا زهرة 3 (Zahra 3) — وكيلك الذكي المستقل فائق القدرة. أستطيع تنفيذ مهامك كاملة، الجدولة، إنشاء الصور والبطاقات الإجرائية، الحساب، الترجمة، حفظ تفضيلاتك في الذاكرة، وكل ذلك محلياً 100% دون إنترنت."
         source = "نظام زهرة 3 الترحيبي"
+        outcomeState = OutcomeState.SUPPORTED
         followups = listOf("إنشاء صورة أو ملصق", "فكرني كل يوم الساعة 8 صباحاً", "احسب 150 * 4", "مواقيت الصلاة اليوم", "ماذا تعرف عني؟")
       }
 
       "farewell" -> {
         responseText = "في أمان الله وحفظه! جميع سجلاتك ومواعيدك وملاحظاتك محفوظة ومشفرة محلياً على جهازك."
         source = "نظام زهرة 3"
+        outcomeState = OutcomeState.SUPPORTED
       }
 
       "help" -> {
@@ -337,12 +489,14 @@ class ZahraRouter(private val context: Context) {
           "8. 📝 الملاحظات والوسوم التلقائية (سجل ملاحظة)\n" +
           "9. 📄 التلخيص الاستخلاصي السريع (لخص هذا النص)"
         source = "دليل قدرات نظام زهرة 3"
+        outcomeState = OutcomeState.SUPPORTED
         followups = listOf("إنشاء صورة أو ملصق", "فكرني كل يوم الساعة 8", "احسب 500 / 4", "ماذا تعرف عني؟")
       }
 
       "thank" -> {
         responseText = "على الرحب والسعة دائماً! يسعدني خدمتك بدقة وموثوقية وسرعة فائقة."
         source = "نظام زهرة 3"
+        outcomeState = OutcomeState.SUPPORTED
       }
 
       else -> {
@@ -356,7 +510,6 @@ class ZahraRouter(private val context: Context) {
       else -> ConfidenceTier.UNCERTAIN
     }
 
-    // Build Deep Thinking steps if deep thinking mode is requested
     val deepThinkingPayload = if (isDeepThinking) {
       val factsCount = memoryEngine.getFacts().size
       val steps = listOf(
@@ -389,7 +542,6 @@ class ZahraRouter(private val context: Context) {
       )
     } else null
 
-    // Attach auto extracted fact payload if user learned something alongside
     if (toolPayload == null && autoExtractedFact != null) {
       toolPayload = ZahraToolPayload.MemoryFactPayload(autoExtractedFact, isNew = true)
     }
@@ -399,6 +551,7 @@ class ZahraRouter(private val context: Context) {
       intent = finalIntent,
       confidence = confidence,
       confidenceTier = tier,
+      outcomeState = outcomeState,
       source = source,
       followups = followups,
       toolPayload = toolPayload,
@@ -415,6 +568,7 @@ class ZahraRouter(private val context: Context) {
       intent = "unknown",
       confidence = 0.15,
       confidenceTier = ConfidenceTier.UNCERTAIN,
+      outcomeState = OutcomeState.UNSUPPORTED,
       source = "قيد الأمان والنزاهة الحتمي لزهرة (لا تخمين)",
       followups = listOf(
         "احسب 250 * 4",

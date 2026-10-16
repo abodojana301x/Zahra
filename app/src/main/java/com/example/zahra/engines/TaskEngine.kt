@@ -1,10 +1,15 @@
 package com.example.zahra.engines
 
+import android.content.Context
+import android.content.SharedPreferences
 import com.example.zahra.core.ZahraNormalizer
 import com.example.zahra.entities.EntityExtractor
 import com.example.zahra.model.ZahraTask
+import org.json.JSONArray
+import org.json.JSONObject
 
-class TaskEngine {
+class TaskEngine(context: Context? = null) {
+  private val prefs: SharedPreferences? = context?.getSharedPreferences("zahra_tasks_prefs", Context.MODE_PRIVATE)
   private val taskList = mutableListOf<ZahraTask>()
 
   private val CATEGORY_PROFILES = mapOf(
@@ -14,6 +19,10 @@ class TaskEngine {
     "مالي" to listOf("فاتورة", "بنك", "حساب", "راتب", "دفع", "قسط", "سداد", "فلوس", "bank", "invoice"),
     "صحي" to listOf("طبيب", "دواء", "موعد", "رياضة", "جيم", "فحص", "صحة", "عيادة", "doctor", "medicine")
   )
+
+  init {
+    loadTasks()
+  }
 
   fun createTask(input: String): ZahraTask {
     val dateInfo = EntityExtractor.parseRelativeDate(input)
@@ -30,6 +39,7 @@ class TaskEngine {
       dueDate = dateInfo?.formattedDate
     )
     taskList.add(0, task)
+    saveTasks()
     return task
   }
 
@@ -40,13 +50,57 @@ class TaskEngine {
     if (idx != -1) {
       val t = taskList[idx]
       taskList[idx] = t.copy(completed = !t.completed)
+      saveTasks()
       return true
     }
     return false
   }
 
   fun deleteTask(id: String): Boolean {
-    return taskList.removeAll { it.id == id }
+    val ok = taskList.removeAll { it.id == id }
+    if (ok) saveTasks()
+    return ok
+  }
+
+  private fun saveTasks() {
+    prefs?.let { p ->
+      val arr = JSONArray()
+      for (t in taskList) {
+        val obj = JSONObject().apply {
+          put("id", t.id)
+          put("title", t.title)
+          put("category", t.category)
+          put("priorityScore", t.priorityScore)
+          t.dueDate?.let { put("dueDate", it) }
+          put("completed", t.completed)
+          put("createdAt", t.createdAt)
+        }
+        arr.put(obj)
+      }
+      p.edit().putString("tasks_data", arr.toString()).commit()
+    }
+  }
+
+  private fun loadTasks() {
+    taskList.clear()
+    val raw = prefs?.getString("tasks_data", null) ?: return
+    try {
+      val arr = JSONArray(raw)
+      for (i in 0 until arr.length()) {
+        val obj = arr.getJSONObject(i)
+        taskList.add(
+          ZahraTask(
+            id = obj.getString("id"),
+            title = obj.getString("title"),
+            category = obj.getString("category"),
+            priorityScore = obj.getInt("priorityScore"),
+            dueDate = if (obj.has("dueDate")) obj.getString("dueDate") else null,
+            completed = obj.optBoolean("completed", false),
+            createdAt = obj.optLong("createdAt", System.currentTimeMillis())
+          )
+        )
+      }
+    } catch (_: Exception) {}
   }
 
   private fun detectCategory(text: String): String {
