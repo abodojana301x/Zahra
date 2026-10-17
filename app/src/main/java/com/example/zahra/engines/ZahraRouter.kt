@@ -248,6 +248,15 @@ class ZahraRouter(private val context: Context) {
             outcomeState = schedVal.outcomeState
             followups = listOf("فكرني كل يوم الساعة 8 صباحاً", "ذكرني بعد ساعة")
           }
+          is ScheduleValidationResult.RegistrationFailed -> {
+            createdSchedule = schedVal.schedule
+            responseText = schedVal.message
+            source = "محرك جدولة وتنبيهات النظام لزهرة 3"
+            confidence = 0.85
+            outcomeState = schedVal.outcomeState
+            toolPayload = ZahraToolPayload.SchedulePayload(schedule = schedVal.schedule, isNew = true)
+            followups = listOf("اعرض المواعيد المجدولة", "فكرني بموعد آخر", "أضف مهمة جديدة")
+          }
           is ScheduleValidationResult.ExecutionError -> {
             responseText = schedVal.message
             source = "محرك تنبيهات النظام"

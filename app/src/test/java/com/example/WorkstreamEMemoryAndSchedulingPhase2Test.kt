@@ -31,6 +31,9 @@ class WorkstreamEMemoryAndSchedulingPhase2Test {
   @Before
   fun setUp() {
     context = ApplicationProvider.getApplicationContext()
+    // Isolate test key for JVM unit tests
+    ZahraCrypto.setTestKeyForTestingOnly(ZahraCrypto.generateTestKey())
+
     // Clear test preferences between test runs
     context.getSharedPreferences("zahra_test_memory_prefs", Context.MODE_PRIVATE).edit().clear().commit()
     context.getSharedPreferences("zahra_test_schedules_prefs", Context.MODE_PRIVATE).edit().clear().commit()
@@ -41,6 +44,11 @@ class WorkstreamEMemoryAndSchedulingPhase2Test {
     memoryEngine = MemoryEngine(context, safeStore)
     scheduleEngine = ScheduleEngine(context, "zahra_test_schedules_prefs")
     router = ZahraRouter(context)
+  }
+
+  @org.junit.After
+  fun tearDown() {
+    ZahraCrypto.setTestKeyForTestingOnly(null)
   }
 
   // =========================================================================
@@ -458,5 +466,129 @@ class WorkstreamEMemoryAndSchedulingPhase2Test {
     assertEquals(17, current?.hour)
     assertEquals("05:00 م", current?.timeDisplay)
     assertTrue("Single verified alarm must remain registered", scheduleEngine.isAlarmRegistered("sched_reschedule_test"))
+  }
+
+  // =========================================================================
+  // REMEDIATION VERIFICATION TESTS (Security, Durability & Integrity)
+  // =========================================================================
+
+  @Test
+  fun testZahraCrypto_failsClosed_malformedPayloadThrowsSecurityException() {
+    // Malformed ciphertext without IV prefix separator
+    try {
+      ZahraCrypto.decrypt("not_a_valid_cipher_payload")
+      fail("Decrypting malformed ciphertext must throw SecurityException and fail closed")
+    } catch (e: SecurityException) {
+      assertTrue("Exception message indicates format or integrity issue", e.message?.contains("غير صالحة") == true || e.message?.contains("فشل فك التشفير") == true)
+    }
+
+    // Tampered payload with bad auth tag
+    val encrypted = ZahraCrypto.encrypt("بيانات اختبار سرية")
+    val parts = encrypted.split(":")
+    val tamperedCipher = parts[1].reversed() // corrupt cipher bytes
+    try {
+      ZahraCrypto.decrypt("${parts[0]}:$tamperedCipher")
+      fail("Decrypting tampered ciphertext must throw SecurityException")
+    } catch (e: SecurityException) {
+      assertNotNull(e.message)
+    }
+  }
+
+  @Test
+  fun testZahraCrypto_hardwareBackedCheck_reportsFalseForTestIsolatedKey() {
+    assertFalse("Test isolated key must not claim hardware backing", ZahraCrypto.isHardwareBacked())
+  }
+
+  @Test
+  fun testSafeMemoryStore_decryptionFailure_treatedAsIntegrityError_neverExposesCiphertext() {
+    val driver = InMemoryMemoryDriver()
+    // Storing a record with corrupted/invalid ciphertext
+    val corruptedJson = """
+      {
+        "schemaVersion": 2,
+        "facts": [
+          {
+            "id": "corrupt_fact_1",
+            "category": "PERSONAL",
+            "key": "الاسم السري",
+            "value": "corrupted_non_decryptable_ciphertext",
+            "isEncrypted": true,
+            "confidence": 1.0,
+            "source": "USER_EXPLICIT",
+            "isConfirmed": true,
+            "createdAt": 1600000000000,
+            "updatedAt": 1600000000000
+          }
+        ]
+      }
+    """.trimIndent()
+    driver.writeRawData(corruptedJson)
+
+    val store = SafeMemoryStore(driver, enableEncryption = true)
+    // The active facts must NOT contain the corrupted record with raw ciphertext
+    assertEquals("Corrupted record must NOT be returned in active confirmed facts", 0, store.getConfirmedFacts().size)
+    // Corrupted record must be preserved for recovery
+    val corruptedList = store.getCorruptedRecords()
+    assertEquals("Corrupted record must be preserved for recovery", 1, corruptedList.size)
+    assertEquals("الاسم السري", corruptedList[0].key)
+  }
+
+  @Test
+  fun testSafeMemoryStore_updateFactById_preventsCollisionWithDifferentKey() {
+    val factA = memoryEngine.addFact(FactCategory.PERSONAL, "البريد الإلكتروني", "user@example.com")
+    val factB = memoryEngine.addFact(FactCategory.PERSONAL, "الهاتف", "0501234567")
+
+    // Attempt to update factB so that its key collides with factA's key
+    val collisionResult = memoryEngine.updateFact(factB.id, "البريد الإلكتروني", "new_email@example.com")
+    assertTrue("Updating to an existing conflicting key must be rejected", collisionResult is MemorySaveResult.ValidationFailed)
+
+    // Verify factA and factB were preserved without overwrite
+    val facts = memoryEngine.getFacts()
+    assertEquals(2, facts.size)
+    val restoredA = facts.find { it.id == factA.id }
+    val restoredB = facts.find { it.id == factB.id }
+    assertEquals("user@example.com", restoredA?.value)
+    assertEquals("0501234567", restoredB?.value)
+  }
+
+  @Test
+  fun testSafeMemoryStore_deleteFact_failedReadBackReturnsFalse() {
+    val driver = InMemoryMemoryDriver()
+    val store = SafeMemoryStore(driver, enableEncryption = false)
+    val saveRes = store.saveFact(FactCategory.PERSONAL, "مفتاح الحذف", "قيمة") as MemorySaveResult.Success
+
+    // If driver simulates failure on writes
+    driver.setSimulateWriteFailure(true)
+    val deleted = store.deleteFact(saveRes.fact.id)
+    assertFalse("Delete must return false if storage write or read-back verification fails", deleted)
+    assertEquals("Item must remain in store if deletion failed", 1, store.getConfirmedFacts().size)
+  }
+
+  @Test
+  fun testSafeMemoryStore_clearAll_verifiesEmptyState() {
+    val driver = InMemoryMemoryDriver()
+    val store = SafeMemoryStore(driver, enableEncryption = false)
+    store.saveFact(FactCategory.PERSONAL, "عنصر 1", "قيمة 1")
+    store.saveFact(FactCategory.PERSONAL, "عنصر 2", "قيمة 2")
+    assertEquals(2, store.getConfirmedFacts().size)
+
+    val cleared = store.clearAll()
+    assertTrue("clearAll must return true when storage is empty", cleared)
+    assertEquals(0, store.getConfirmedFacts().size)
+  }
+
+  @Test
+  fun testScheduleEngine_noUnsolicitedDefaultAlarms() {
+    // A fresh ScheduleEngine must start with ZERO schedules (no unsolicited morning alarms)
+    val freshEngine = ScheduleEngine(context, "fresh_empty_schedule_prefs")
+    assertEquals("Fresh schedule engine must not register unsolicited default alarms", 0, freshEngine.getSchedules().size)
+  }
+
+  @Test
+  fun testZahraBootReceiver_reconcilesOnBoot() {
+    val bootReceiver = com.example.zahra.engines.ZahraBootReceiver()
+    val bootIntent = android.content.Intent(android.content.Intent.ACTION_BOOT_COMPLETED)
+    // Execution must complete without error
+    bootReceiver.onReceive(context, bootIntent)
   }
 }

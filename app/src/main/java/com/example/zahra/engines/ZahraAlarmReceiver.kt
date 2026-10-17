@@ -11,10 +11,9 @@ import androidx.core.app.NotificationCompat
 import com.example.MainActivity
 
 /**
- * Android BroadcastReceiver for Zahra 3 alarms and system events:
- * - Alarm triggering with duplicate delivery prevention
- * - Device boot reconciliation (re-registers all alarms after reboot)
- * - Clock / time-zone change reconciliation
+ * Internal Android BroadcastReceiver for Zahra 3 alarms.
+ * Configured with android:exported="false" to prevent spoofing or injection of reminder broadcasts by 3rd-party apps.
+ * AlarmManager delivers the PendingIntent with system token to unexported receivers safely.
  */
 class ZahraAlarmReceiver : BroadcastReceiver() {
 
@@ -23,20 +22,9 @@ class ZahraAlarmReceiver : BroadcastReceiver() {
   }
 
   override fun onReceive(context: Context, intent: Intent) {
-    val action = intent.action
+    // Only accept ACTION_ALARM_TRIGGER
+    if (intent.action != ACTION_ALARM_TRIGGER) return
 
-    // 1. Handle Device Reboot, Package Update, Clock or Timezone Changes
-    if (action == Intent.ACTION_BOOT_COMPLETED ||
-      action == Intent.ACTION_MY_PACKAGE_REPLACED ||
-      action == Intent.ACTION_TIME_CHANGED ||
-      action == Intent.ACTION_TIMEZONE_CHANGED
-    ) {
-      val scheduleEngine = ScheduleEngine(context)
-      scheduleEngine.reconcileSchedules()
-      return
-    }
-
-    // 2. Handle Alarm Trigger
     val scheduleId = intent.getStringExtra("EXTRA_SCHEDULE_ID") ?: return
     val title = intent.getStringExtra("EXTRA_TITLE") ?: "تنبيه من زهرة 3"
     val message = intent.getStringExtra("EXTRA_MESSAGE") ?: "حان موعد المهمة المجدولة المعتمدة."

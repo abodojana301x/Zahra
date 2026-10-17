@@ -28,11 +28,17 @@
             </intent-filter>
         </activity>
 
+        <!-- Internal alarm receiver: unexported to prevent spoofing by third-party apps -->
         <receiver
             android:name="com.example.zahra.engines.ZahraAlarmReceiver"
-            android:exported="true">
+            android:exported="false" />
+
+        <!-- System boot and time reconciliation receiver: protected by RECEIVE_BOOT_COMPLETED -->
+        <receiver
+            android:name="com.example.zahra.engines.ZahraBootReceiver"
+            android:exported="true"
+            android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
             <intent-filter>
-                <action android:name="com.example.zahra.ALARM_TRIGGER" />
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
                 <action android:name="android.intent.action.TIME_SET" />

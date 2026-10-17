@@ -16,13 +16,32 @@ import org.json.JSONObject
 import java.util.Calendar
 import java.util.Locale
 
+/**
+ * Result of schedule validation and execution with full separation of concerns:
+ * - Field Validation
+ * - Storage Persistence
+ * - Platform Alarm Registration
+ * - Android Permissions (Exact Alarm & Notifications)
+ */
 sealed interface ScheduleValidationResult {
   data class Success(
     val schedule: ZahraSchedule,
     val summary: String,
     val outcomeState: OutcomeState = OutcomeState.SUPPORTED,
+    val isPersisted: Boolean = true,
+    val isSchedulerRegistered: Boolean = true,
     val isExactAlarmRegistered: Boolean = true,
     val isNotificationPermissionGranted: Boolean = true
+  ) : ScheduleValidationResult
+
+  data class RegistrationFailed(
+    val schedule: ZahraSchedule,
+    val message: String,
+    val isPersisted: Boolean,
+    val isSchedulerRegistered: Boolean = false,
+    val isExactAlarmRegistered: Boolean = false,
+    val isNotificationPermissionGranted: Boolean,
+    val outcomeState: OutcomeState = OutcomeState.EXECUTION_ERROR
   ) : ScheduleValidationResult
 
   data class Ambiguous(
@@ -42,10 +61,24 @@ sealed interface ScheduleValidationResult {
 }
 
 /**
+ * Detailed outcome of schedule persistence and system scheduler registration.
+ */
+data class ScheduleRegistrationOutcome(
+  val isPersisted: Boolean,
+  val isSchedulerRegistered: Boolean,
+  val isExactAlarmRegistered: Boolean,
+  val isNotificationPermissionGranted: Boolean,
+  val schedule: ZahraSchedule,
+  val failureReason: String? = null
+)
+
+/**
  * Phase 2 Reliable Scheduling Engine for Zahra.
  * Implements the lifecycle: Requested → Validated → Permission Checked → Persisted → Scheduled → Verified → Delivered.
  * Guarantees zero orphaned alarms, failure-safe storage with synchronous commit & read-back,
  * device reboot reconciliation, and duplicate delivery prevention.
+ *
+ * NOTE: Unsolicited default alarms have been removed. Scheduling occurs exclusively upon explicit user request.
  */
 class ScheduleEngine(
   private val context: Context,
@@ -59,21 +92,7 @@ class ScheduleEngine(
 
   init {
     loadSchedules()
-    if (schedules.isEmpty()) {
-      val defaultSchedule = ZahraSchedule(
-        id = "default_sched_morning",
-        title = "تحفيز وأذكار الصباح",
-        message = "صباح الخير! ابدأ يومك بإيجابية وتوكل على الله.",
-        timeDisplay = "08:00 ص",
-        hour = 8,
-        minute = 0,
-        isDaily = true,
-        isEnabled = true,
-        actionType = "DAILY_MOTIVATION",
-        state = ReminderState.SCHEDULED
-      )
-      addSchedule(defaultSchedule)
-    }
+    // Product rule: No automatic unsolicited alarms. Schedules must be explicitly requested.
   }
 
   fun getSchedules(): List<ZahraSchedule> = synchronized(schedules) { schedules.toList() }
@@ -101,11 +120,22 @@ class ScheduleEngine(
   }
 
   /**
-   * Verifies if a real system alarm is registered for this schedule ID using FLAG_NO_CREATE.
+   * Checks whether a PendingIntent broadcast token is currently active in the system process for this schedule ID.
+   *
+   * PLATFORM LIMITATION & EVIDENCE LEVEL:
+   * Android's AlarmManager does not provide an API for user-space applications to directly query its internal
+   * pending alarm queue. The presence of a non-null PendingIntent retrieved with [PendingIntent.FLAG_NO_CREATE]
+   * confirms that an active system broadcast token exists for this schedule ID, but cannot guarantee that
+   * the AlarmManager daemon has not dropped or deferred it due to OEM battery optimizations or power states.
+   * True end-to-end registration evidence is verified via:
+   * 1. Successful execution of AlarmManager.setExactAndAllowWhileIdle without SecurityException
+   * 2. Verification of PendingIntent token existence via FLAG_NO_CREATE
+   * 3. Confirmed SCHEDULE_EXACT_ALARM permission status
    */
-  fun isAlarmRegistered(scheduleId: String): Boolean {
+  fun isPendingIntentTokenActive(scheduleId: String): Boolean {
     val intent = Intent(context, ZahraAlarmReceiver::class.java).apply {
       action = ZahraAlarmReceiver.ACTION_ALARM_TRIGGER
+      setPackage(context.packageName)
     }
     val pendingIntent = PendingIntent.getBroadcast(
       context,
@@ -115,6 +145,11 @@ class ScheduleEngine(
     )
     return pendingIntent != null
   }
+
+  /**
+   * Backward-compatible alias for existing tests and components.
+   */
+  fun isAlarmRegistered(scheduleId: String): Boolean = isPendingIntentTokenActive(scheduleId)
 
   /**
    * Calculates the next epoch timestamp in milliseconds for the given hour, minute and daily flag.
@@ -141,47 +176,90 @@ class ScheduleEngine(
    * 2. Permission check
    * 3. Persist to storage with synchronous commit
    * 4. Register with AlarmManager
-   * 5. Verify system registration
+   * 5. Verify system registration token
    */
   fun addSchedule(schedule: ZahraSchedule): Boolean {
+    val outcome = registerAndPersistSchedule(schedule)
+    return outcome.isPersisted && (outcome.isSchedulerRegistered || !schedule.isEnabled)
+  }
+
+  /**
+   * Full atomic operation separating persistence from system alarm registration.
+   */
+  fun registerAndPersistSchedule(schedule: ZahraSchedule): ScheduleRegistrationOutcome {
     synchronized(schedules) {
-      // Clean up previous registration if updating
+      // 1. Clean up any previous alarm token before rescheduling
       cancelSystemAlarm(schedule.id)
 
       val targetEpoch = if (schedule.targetEpochMs > 0) schedule.targetEpochMs else calculateNextTargetEpoch(schedule.hour, schedule.minute)
       val notifPerm = hasNotificationPermission()
       val exactPerm = hasExactAlarmPermission()
 
-      var targetState = when {
-        !schedule.isEnabled -> ReminderState.CANCELLED
-        !notifPerm -> ReminderState.PERMISSION_REQUIRED
-        else -> ReminderState.SCHEDULED
-      }
-
       var finalSchedule = schedule.copy(
         targetEpochMs = targetEpoch,
-        state = targetState,
         updatedAt = System.currentTimeMillis()
       )
 
-      schedules.removeAll { it.id == schedule.id }
-      schedules.add(0, finalSchedule)
-      val saveOk = saveSchedules()
-      if (!saveOk) return false
+      var schedulerSuccess = false
+      var failureReasonText: String? = null
 
       if (finalSchedule.isEnabled) {
-        val registerOk = registerSystemAlarm(finalSchedule)
-        val verified = isAlarmRegistered(finalSchedule.id)
-        if (!registerOk || !verified) {
+        schedulerSuccess = registerSystemAlarm(finalSchedule)
+        val tokenVerified = isPendingIntentTokenActive(finalSchedule.id)
+
+        if (!schedulerSuccess || !tokenVerified) {
+          schedulerSuccess = false
+          failureReasonText = if (!exactPerm) "إذن المنبهات الدقيقة غير مفعل في النظام" else "فشل تسجيل المنبه في خدمة النظام (AlarmManager)"
           finalSchedule = finalSchedule.copy(
-            state = if (!exactPerm) ReminderState.SCHEDULED else ReminderState.FAILED,
-            failureReason = if (!exactPerm) "منبه تقريبي لغياب إذن الدقة" else "فشل تسجيل المنبه في النظام"
+            state = if (!notifPerm) ReminderState.PERMISSION_REQUIRED else ReminderState.FAILED,
+            failureReason = failureReasonText
           )
-          schedules[0] = finalSchedule
-          saveSchedules()
+        } else {
+          finalSchedule = finalSchedule.copy(
+            state = if (!notifPerm) ReminderState.PERMISSION_REQUIRED else ReminderState.SCHEDULED,
+            failureReason = if (!exactPerm) "منبه تقريبي لغياب إذن المنبهات الدقيقة" else null
+          )
         }
+      } else {
+        finalSchedule = finalSchedule.copy(
+          state = ReminderState.CANCELLED,
+          failureReason = null
+        )
       }
-      return true
+
+      val existingIdx = schedules.indexOfFirst { it.id == schedule.id }
+      val backupList = ArrayList(schedules)
+
+      if (existingIdx >= 0) {
+        schedules[existingIdx] = finalSchedule
+      } else {
+        schedules.add(0, finalSchedule)
+      }
+
+      val saveOk = saveSchedules()
+      if (!saveOk) {
+        // Rollback memory cache and cancel registered alarm to prevent orphan
+        schedules.clear()
+        schedules.addAll(backupList)
+        cancelSystemAlarm(finalSchedule.id)
+        return ScheduleRegistrationOutcome(
+          isPersisted = false,
+          isSchedulerRegistered = false,
+          isExactAlarmRegistered = false,
+          isNotificationPermissionGranted = notifPerm,
+          schedule = schedule,
+          failureReason = "فشل حفظ الموعد في التخزين الدائم للجهاز"
+        )
+      }
+
+      return ScheduleRegistrationOutcome(
+        isPersisted = true,
+        isSchedulerRegistered = schedulerSuccess,
+        isExactAlarmRegistered = schedulerSuccess && exactPerm,
+        isNotificationPermissionGranted = notifPerm,
+        schedule = finalSchedule,
+        failureReason = failureReasonText
+      )
     }
   }
 
@@ -197,7 +275,8 @@ class ScheduleEngine(
           updatedAt = System.currentTimeMillis()
         )
         schedules[index] = updated
-        saveSchedules()
+        val saveOk = saveSchedules()
+        if (!saveOk) return false
 
         if (updated.isEnabled) {
           registerSystemAlarm(updated)
@@ -215,8 +294,15 @@ class ScheduleEngine(
       val item = schedules.find { it.id == id }
       if (item != null) {
         cancelSystemAlarm(item.id)
+        val backup = ArrayList(schedules)
         schedules.remove(item)
-        return saveSchedules()
+        val saveOk = saveSchedules()
+        if (!saveOk) {
+          schedules.clear()
+          schedules.addAll(backup)
+          return false
+        }
+        return true
       }
       return false
     }
@@ -321,7 +407,7 @@ class ScheduleEngine(
 
         // Active reminder: Ensure registration in AlarmManager
         val registered = registerSystemAlarm(item)
-        val verified = isAlarmRegistered(item.id)
+        val verified = isPendingIntentTokenActive(item.id)
         val updatedState = when {
           !notifPerm -> ReminderState.PERMISSION_REQUIRED
           verified -> ReminderState.SCHEDULED
@@ -342,6 +428,7 @@ class ScheduleEngine(
   fun testFireNotification(schedule: ZahraSchedule) {
     val intent = Intent(context, ZahraAlarmReceiver::class.java).apply {
       action = ZahraAlarmReceiver.ACTION_ALARM_TRIGGER
+      setPackage(context.packageName)
       putExtra("EXTRA_SCHEDULE_ID", schedule.id)
       putExtra("EXTRA_TITLE", "🔔 [تنبيه زهرة] ${schedule.title}")
       putExtra("EXTRA_MESSAGE", schedule.message)
@@ -354,6 +441,7 @@ class ScheduleEngine(
 
     val intent = Intent(context, ZahraAlarmReceiver::class.java).apply {
       action = ZahraAlarmReceiver.ACTION_ALARM_TRIGGER
+      setPackage(context.packageName)
       putExtra("EXTRA_SCHEDULE_ID", schedule.id)
       putExtra("EXTRA_TITLE", schedule.title)
       putExtra("EXTRA_MESSAGE", schedule.message)
@@ -418,6 +506,7 @@ class ScheduleEngine(
     val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
     val intent = Intent(context, ZahraAlarmReceiver::class.java).apply {
       action = ZahraAlarmReceiver.ACTION_ALARM_TRIGGER
+      setPackage(context.packageName)
     }
     val pendingIntent = PendingIntent.getBroadcast(
       context,
@@ -496,36 +585,51 @@ class ScheduleEngine(
       state = ReminderState.PENDING
     )
 
-    // 6. Execute side effect only after full validation
-    val alarmSuccess = addSchedule(schedule)
-    val notifGranted = hasNotificationPermission()
-    val exactGranted = hasExactAlarmPermission()
+    // 6. Execute side effect with honest separation of persistence & alarm registration
+    val outcome = registerAndPersistSchedule(schedule)
 
-    return if (alarmSuccess) {
-      val recurrenceText = if (isDaily) "يومياً" else if (parsedDate != null) parsedDate.rawExpression else "في الموعد المحدد"
-
-      val permissionNote = when {
-        !notifGranted -> "\n⚠️ تنبيه: إذن الإشعارات غير مفعل في هاتفك حالياً، يرجى تفعيله من الإعدادات لظهور التنبيهات."
-        !exactGranted -> "\n💡 ملاحظة: منبه تقريبي (يلزم إذن المنبهات الدقيقة لضمان التوقيت بالدقيقة بالضبط)."
-        else -> "\n✅ تم التحقق وتأكيد جدولة المنبه في نظام أندرويد بدقة."
-      }
-
-      val summary = "تمت الجدولة بنجاح:\n• التذكير: ${schedule.title}\n• الوقت: ${schedule.timeDisplay}\n• التكرار: $recurrenceText$permissionNote"
-      ScheduleValidationResult.Success(
-        schedule = getScheduleById(schedule.id) ?: schedule,
-        summary = summary,
-        isExactAlarmRegistered = exactGranted,
-        isNotificationPermissionGranted = notifGranted
+    if (!outcome.isPersisted) {
+      return ScheduleValidationResult.ExecutionError(
+        "فشلت عملية حفظ التذكير في التخزين المحلي للجهاز: ${outcome.failureReason ?: "خطأ غير متوقع"}."
       )
-    } else {
-      ScheduleValidationResult.ExecutionError("لم أتمكن من تسجيل التنبيه في منبه النظام بسبب قيود الأذونات، لذلك لم أؤكد جدولته.")
     }
+
+    if (!outcome.isSchedulerRegistered) {
+      return ScheduleValidationResult.RegistrationFailed(
+        schedule = outcome.schedule,
+        message = "تم حفظ تفاصيل التذكير محلياً بنجاح، ولكن تعذر تسجيل المنبه في نظام أندرويد (${outcome.failureReason}). يرجى التأكد من صلاحيات النظام.",
+        isPersisted = true,
+        isSchedulerRegistered = false,
+        isExactAlarmRegistered = false,
+        isNotificationPermissionGranted = outcome.isNotificationPermissionGranted
+      )
+    }
+
+    val recurrenceText = if (isDaily) "يومياً" else if (parsedDate != null) parsedDate.rawExpression else "في الموعد المحدد"
+
+    val permissionNote = when {
+      !outcome.isNotificationPermissionGranted -> "\n⚠️ تنبيه: إذن الإشعارات غير مفعل في هاتفك حالياً، يرجى تفعيله من الإعدادات لظهور التنبيهات."
+      !outcome.isExactAlarmRegistered -> "\n💡 ملاحظة: منبه تقريبي (يلزم إذن المنبهات الدقيقة لضمان التوقيت بالدقيقة بالضبط)."
+      else -> "\n✅ تم التحقق وتأكيد جدولة المنبه في نظام أندرويد بدقة."
+    }
+
+    val summary = "تمت الجدولة بنجاح:\n• التذكير: ${schedule.title}\n• الوقت: ${schedule.timeDisplay}\n• التكرار: $recurrenceText$permissionNote"
+
+    return ScheduleValidationResult.Success(
+      schedule = getScheduleById(schedule.id) ?: outcome.schedule,
+      summary = summary,
+      isPersisted = true,
+      isSchedulerRegistered = true,
+      isExactAlarmRegistered = outcome.isExactAlarmRegistered,
+      isNotificationPermissionGranted = outcome.isNotificationPermissionGranted
+    )
   }
 
   fun parseAndCreateFromNaturalLanguage(text: String): ZahraSchedule {
     val res = validateAndSchedule(text)
     return when (res) {
       is ScheduleValidationResult.Success -> res.schedule
+      is ScheduleValidationResult.RegistrationFailed -> res.schedule
       else -> {
         val s = ZahraSchedule(
           title = "تذكير مجدول",
