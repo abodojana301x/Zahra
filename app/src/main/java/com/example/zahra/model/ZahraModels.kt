@@ -129,6 +129,22 @@ sealed interface ZahraToolPayload {
     val isNew: Boolean = true,
     val executionSummary: String = "تمت الجدولة بنجاح"
   ) : ZahraToolPayload
+
+  data class KnowledgePayload(
+    val title: String,
+    val category: String,
+    val content: String,
+    val originalSourceText: String,
+    val source: String,
+    val sourceLocation: String,
+    val verificationStatusText: String,
+    val isVerified: Boolean,
+    val matchMethodText: String,
+    val relevancePercent: Int,
+    val recordId: String,
+    val warning: String? = null,
+    val conflicts: List<String> = emptyList()
+  ) : ZahraToolPayload
 }
 
 data class DeepThinkingPayload(

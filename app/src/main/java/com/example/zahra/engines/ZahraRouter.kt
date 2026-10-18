@@ -6,6 +6,9 @@ import com.example.zahra.core.ZahraNormalizer
 import com.example.zahra.entities.EntityExtractor
 import com.example.zahra.intent.NaiveBayesClassifier
 import com.example.zahra.intent.RegexMatcher
+import com.example.zahra.knowledge.engine.KnowledgeEngine
+import com.example.zahra.knowledge.model.KnowledgeRetrievalState
+import com.example.zahra.knowledge.model.KnowledgeQueryResult
 import com.example.zahra.model.*
 import org.json.JSONObject
 
@@ -18,6 +21,7 @@ class ZahraRouter(private val context: Context) {
   val memoryEngine = MemoryEngine(context)
   val localImageEngine = LocalImageEngine()
   val scheduleEngine = ScheduleEngine(context)
+  val knowledgeEngine = KnowledgeEngine(context)
 
   init {
     loadTrainingCorpus()
@@ -186,9 +190,16 @@ class ZahraRouter(private val context: Context) {
     val isSchedReq = normalized.contains("جدول") || normalized.contains("فكرني") || normalized.contains("ذكرني") ||
                      normalized.contains("نبهني") || normalized.contains("كل يوم") || normalized.contains("يومي") ||
                      normalized.contains("منبه") || normalized.contains("تذكير") || normalized.contains("schedule")
+    val isReligiousReq = normalized.contains("حديث") || normalized.contains("رسول الله") ||
+                         normalized.contains("قال رسول") || normalized.contains("سورة") ||
+                         normalized.contains("آية") || normalized.contains("اية") ||
+                         normalized.contains("قرآن") || normalized.contains("قران") ||
+                         normalized.contains("تخريج حديث") || normalized.contains("صحة حديث")
+
     val finalIntent = when {
       isCancelSched -> "cancel_schedule"
       (effectiveIntent == "unknown" || confidence < 0.85) && isSchedReq -> "create_schedule"
+      (effectiveIntent == "define_word" || effectiveIntent == "unknown") && isReligiousReq -> "ask_religion"
       else -> effectiveIntent
     }
 
@@ -508,8 +519,90 @@ class ZahraRouter(private val context: Context) {
         outcomeState = OutcomeState.SUPPORTED
       }
 
+      "query_knowledge", "define_word" -> {
+        val kRes = knowledgeEngine.query(rawInput)
+        when (kRes.state) {
+          KnowledgeRetrievalState.VERIFIED_MATCH, KnowledgeRetrievalState.TRACEABLE_CANDIDATE -> {
+            val best = kRes.bestMatch!!
+            responseText = "${best.record.canonicalContent}\n\n[المصدر: ${best.record.provenance.sourceTitle} - ${best.record.provenance.sourceLocation}]"
+            source = "[${best.record.provenance.sourceTitle} - ${best.record.provenance.origin}]"
+            confidence = best.relevanceScore
+            outcomeState = OutcomeState.SUPPORTED
+            toolPayload = ZahraToolPayload.KnowledgePayload(
+              title = best.record.title,
+              category = best.record.category.labelAr,
+              content = best.record.canonicalContent,
+              originalSourceText = best.record.originalSourceText,
+              source = best.record.provenance.sourceTitle,
+              sourceLocation = best.record.provenance.sourceLocation,
+              verificationStatusText = best.record.verificationStatus.labelAr,
+              isVerified = best.record.verificationStatus.isVerified,
+              matchMethodText = best.matchMethod.labelAr,
+              relevancePercent = (best.relevanceScore * 100).toInt(),
+              recordId = best.record.id,
+              warning = best.warning
+            )
+            followups = listOf("ابحث في المعرفة", "ما هي سرعة الضوء؟", "من هو الخوارزمي؟")
+          }
+          KnowledgeRetrievalState.CONFLICTING_EVIDENCE -> {
+            responseText = kRes.abstentionReason ?: "توجد أدلة متعارضة مسجلة حول هذه المسألة."
+            source = "مدقق النزاهة المعرفية لزهرة 3"
+            confidence = 0.60
+            outcomeState = OutcomeState.AMBIGUOUS
+            toolPayload = kRes.bestMatch?.let { best ->
+              ZahraToolPayload.KnowledgePayload(
+                title = best.record.title,
+                category = best.record.category.labelAr,
+                content = best.record.canonicalContent,
+                originalSourceText = best.record.originalSourceText,
+                source = best.record.provenance.sourceTitle,
+                sourceLocation = best.record.provenance.sourceLocation,
+                verificationStatusText = best.record.verificationStatus.labelAr,
+                isVerified = false,
+                matchMethodText = best.matchMethod.labelAr,
+                relevancePercent = (best.relevanceScore * 100).toInt(),
+                recordId = best.record.id,
+                warning = "أدلة متعددة متعارضة",
+                conflicts = kRes.conflicts.map { it.description }
+              )
+            }
+          }
+          KnowledgeRetrievalState.INSUFFICIENT_EVIDENCE, KnowledgeRetrievalState.NO_MATCH, KnowledgeRetrievalState.ERROR -> {
+            responseText = kRes.abstentionReason ?: "المسألة غير مسجلة في قاعدة المعرفة المعتمدة لزهرة 3. يمتنع المساعد تماماً عن التخمين أو تأليف معلومات غير موثقة (Truth Before Intelligence)."
+            source = "قيد النزاهة المعرفية لزهرة 3 (Truth Before Intelligence)"
+            confidence = 0.20
+            outcomeState = OutcomeState.UNSUPPORTED
+            followups = listOf("ما هي سرعة الضوء؟", "درجة غليان الماء", "من هو الخوارزمي؟", "أعلى قمة في العالم")
+          }
+        }
+      }
+
       else -> {
-        return generateFallback(rawInput)
+        // Check if query matches a verified knowledge entry before generic fallback
+        val kRes = knowledgeEngine.query(rawInput)
+        if (kRes.state == KnowledgeRetrievalState.VERIFIED_MATCH && (kRes.bestMatch?.relevanceScore ?: 0.0) >= 0.50) {
+          val best = kRes.bestMatch!!
+          responseText = "${best.record.canonicalContent}\n\n[المصدر: ${best.record.provenance.sourceTitle} - ${best.record.provenance.sourceLocation}]"
+          source = "[${best.record.provenance.sourceTitle} - ${best.record.provenance.origin}]"
+          confidence = best.relevanceScore
+          outcomeState = OutcomeState.SUPPORTED
+          toolPayload = ZahraToolPayload.KnowledgePayload(
+            title = best.record.title,
+            category = best.record.category.labelAr,
+            content = best.record.canonicalContent,
+            originalSourceText = best.record.originalSourceText,
+            source = best.record.provenance.sourceTitle,
+            sourceLocation = best.record.provenance.sourceLocation,
+            verificationStatusText = best.record.verificationStatus.labelAr,
+            isVerified = best.record.verificationStatus.isVerified,
+            matchMethodText = best.matchMethod.labelAr,
+            relevancePercent = (best.relevanceScore * 100).toInt(),
+            recordId = best.record.id,
+            warning = best.warning
+          )
+        } else {
+          return generateFallback(rawInput)
+        }
       }
     }
 

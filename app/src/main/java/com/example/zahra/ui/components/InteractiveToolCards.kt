@@ -623,11 +623,232 @@ fun InteractiveToolCard(
       )
     }
 
+    is ZahraToolPayload.KnowledgePayload -> {
+      KnowledgeCard(
+        payload = payload,
+        onQuickQuery = onQuickQuery,
+        modifier = modifier
+      )
+    }
+
     is com.example.zahra.model.DeepThinkingPayload -> {
       DeepThinkingCard(
         payload = payload,
         modifier = modifier
       )
+    }
+  }
+}
+
+@Composable
+fun KnowledgeCard(
+  payload: ZahraToolPayload.KnowledgePayload,
+  onQuickQuery: (String) -> Unit = {},
+  modifier: Modifier = Modifier
+) {
+  val context = LocalContext.current
+  val clipboardManager = LocalClipboardManager.current
+  var isExpanded by remember { mutableStateOf(false) }
+
+  Column(
+    modifier = modifier
+      .fillMaxWidth()
+      .clip(RoundedCornerShape(16.dp))
+      .background(MaterialTheme.colorScheme.surface)
+      .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
+      .padding(14.dp)
+      .testTag("knowledge_card_${payload.recordId}")
+  ) {
+    // Header
+    Row(
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.SpaceBetween,
+      modifier = Modifier.fillMaxWidth()
+    ) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+          imageVector = Icons.Outlined.MenuBook,
+          contentDescription = "Knowledge Engine",
+          tint = Color(0xFF06B6D4),
+          modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+          text = "محرك المعرفة المحلية الموثقة",
+          color = Color(0xFF06B6D4),
+          fontSize = 12.sp,
+          fontWeight = FontWeight.Bold
+        )
+      }
+
+      Surface(
+        shape = RoundedCornerShape(6.dp),
+        color = if (payload.isVerified) Color(0xFF10A37F).copy(alpha = 0.15f) else Color(0xFFF59E0B).copy(alpha = 0.15f)
+      ) {
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+        ) {
+          Icon(
+            imageVector = if (payload.isVerified) Icons.Outlined.Verified else Icons.Outlined.Warning,
+            contentDescription = null,
+            tint = if (payload.isVerified) Color(0xFF10A37F) else Color(0xFFF59E0B),
+            modifier = Modifier.size(12.dp)
+          )
+          Spacer(modifier = Modifier.width(4.dp))
+          Text(
+            text = payload.verificationStatusText,
+            color = if (payload.isVerified) Color(0xFF10A37F) else Color(0xFFF59E0B),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold
+          )
+        }
+      }
+    }
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    // Title & Category
+    Row(
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.SpaceBetween,
+      modifier = Modifier.fillMaxWidth()
+    ) {
+      Text(
+        text = payload.title,
+        color = MaterialTheme.colorScheme.onSurface,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.weight(1f)
+      )
+      Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceVariant
+      ) {
+        Text(
+          text = payload.category,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          fontSize = 10.sp,
+          modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+        )
+      }
+    }
+
+    Spacer(modifier = Modifier.height(6.dp))
+
+    // Content Excerpt
+    Text(
+      text = payload.content,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      fontSize = 12.sp,
+      lineHeight = 18.sp
+    )
+
+    // Warnings if any
+    if (payload.warning != null) {
+      Spacer(modifier = Modifier.height(8.dp))
+      Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = Color(0xFFF59E0B).copy(alpha = 0.1f),
+        modifier = Modifier.fillMaxWidth()
+      ) {
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          modifier = Modifier.padding(8.dp)
+        ) {
+          Icon(
+            imageVector = Icons.Outlined.Info,
+            contentDescription = null,
+            tint = Color(0xFFF59E0B),
+            modifier = Modifier.size(14.dp)
+          )
+          Spacer(modifier = Modifier.width(6.dp))
+          Text(
+            text = payload.warning,
+            color = Color(0xFFF59E0B),
+            fontSize = 11.sp
+          )
+        }
+      }
+    }
+
+    // Conflicts breakdown if any
+    if (payload.conflicts.isNotEmpty()) {
+      Spacer(modifier = Modifier.height(8.dp))
+      Column(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(8.dp))
+          .background(Color(0xFFEF4444).copy(alpha = 0.1f))
+          .padding(8.dp)
+      ) {
+        Text(
+          text = "⚠️ تعارض في الأدلة المسجلة:",
+          color = Color(0xFFEF4444),
+          fontSize = 11.sp,
+          fontWeight = FontWeight.Bold
+        )
+        payload.conflicts.forEach { desc ->
+          Text(
+            text = "• $desc",
+            color = MaterialTheme.colorScheme.onSurface,
+            fontSize = 11.sp
+          )
+        }
+      }
+    }
+
+    Spacer(modifier = Modifier.height(10.dp))
+
+    // Traceability Footer
+    Row(
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.SpaceBetween,
+      modifier = Modifier.fillMaxWidth()
+    ) {
+      Column(modifier = Modifier.weight(1f)) {
+        Text(
+          text = "المصدر: ${payload.source}",
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          fontSize = 10.sp,
+          fontWeight = FontWeight.Medium
+        )
+        Text(
+          text = "الموضع: ${payload.sourceLocation} • طريقة المطابقة: ${payload.matchMethodText}",
+          color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+          fontSize = 9.sp
+        )
+      }
+
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Surface(
+          shape = RoundedCornerShape(4.dp),
+          color = Color(0xFF06B6D4).copy(alpha = 0.15f)
+        ) {
+          Text(
+            text = "${payload.relevancePercent}% صلة",
+            color = Color(0xFF06B6D4),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+          )
+        }
+
+        IconButton(
+          onClick = {
+            clipboardManager.setText(AnnotatedString("${payload.title}\n${payload.content}\n\nالمصدر: ${payload.source} (${payload.sourceLocation})"))
+            Toast.makeText(context, "تم نسخ التوثيق والمصدر إلى الحافظة", Toast.LENGTH_SHORT).show()
+          },
+          modifier = Modifier.size(32.dp)
+        ) {
+          Icon(
+            imageVector = Icons.Outlined.ContentCopy,
+            contentDescription = "Copy Citation",
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(16.dp)
+          )
+        }
+      }
     }
   }
 }

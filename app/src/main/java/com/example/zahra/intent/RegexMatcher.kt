@@ -43,7 +43,9 @@ object RegexMatcher {
     PatternRule("help", Regex("^(?:ساعدني|مساعدة|ماذا\\s+تستطيعين|كيف\\s+استخدمك|دليل|help)\\b", RegexOption.IGNORE_CASE), 0.95),
     // 14. Definitions / General
     PatternRule("define_word", Regex("^(?:ما\\s+هو|ما\\s+هي|ما\\s+معنى|عرف(?:لي)?|what\\s+is)\\s+(.+)", RegexOption.IGNORE_CASE), 0.92, 1),
-    // 15. Local Image Generation (Procedural canvas, quotes, pixel art)
+    // 15. Knowledge Search & Curated Facts
+    PatternRule("query_knowledge", Regex("^(?:ابحث\\s+في\\s+المعرف[ةه]|معلومات\\s+عن|ما\\s+هي\\s+سرع[ةه]|ما\\s+درج[ةه]|درج[ةه]\\s+غليان|من\\s+هو|من\\s+هي|اعلى\\s+قم[ةه]|أعلى\\s+قم[ةه]|كم\\s+ساع[ةه]\\s+نوم|كم\\s+ساعات\\s+النوم|ما\\s+هو\\s+تشفير|معيار\\s+التشفير|معلومات\\s+عن\\s+الخوارزمي)\\s*(.*)", RegexOption.IGNORE_CASE), 0.95, 1),
+    // 16. Local Image Generation (Procedural canvas, quotes, pixel art)
     PatternRule("generate_image", Regex(".*(?:انش[ئيا]|ارسم|صمم|ولد|اعمل|سوي)?\\s*(?:لي)?\\s*(?:صوره|صورة|لوحه|لوحة|خلفيه|خلفية|رسمه|رسمة|بطاقه|بطاقة|بكسل|pixel|draw|paint|generate\\s*image).*|^(?:انش[ئيا]|ارسم|صمم|ولد)\\b.*", RegexOption.IGNORE_CASE), 0.98, 1),
     // 16. Schedule and Alarms (Autonomous Agent Reminders)
     PatternRule("create_schedule", Regex(".*(?:جدول|فكرني|ذكرني|نبهني|ابعتلي|تذكير|منبه|schedule|remind).*\\b.*", RegexOption.IGNORE_CASE), 0.98, 1),
