@@ -130,6 +130,12 @@ class ReligionEngine(context: Context) {
     val clean = query.trim()
     val normalized = ZahraNormalizer.normalize(clean)
 
+    // 0. Well-Established Islamic Prohibitions (Riba, Maysir/Gambling, Fraud/Cheating, Intoxicants)
+    val impermissibleCheck = checkImpermissibleRequest(normalized)
+    if (impermissibleCheck != null) {
+      return impermissibleCheck
+    }
+
     // 1. Qibla request
     if (normalized.contains("قبلة") || normalized.contains("اتجاه القبلة") || normalized.contains("qibla")) {
       return calculateQibla(24.7136, 46.6753)
@@ -179,6 +185,58 @@ class ReligionEngine(context: Context) {
       outcomeState = OutcomeState.UNSUPPORTED,
       followups = listOf("أركان الوضوء", "نواقض الوضوء", "مواقيت الصلاة", "اتجاه القبلة")
     )
+  }
+
+  fun checkImpermissibleRequest(normalized: String): RelAnswer? {
+    // Usury / Riba
+    if (normalized.contains("ربا") || normalized.contains("فائده ربويه") || normalized.contains("قرض ربوي") ||
+        normalized.contains("فوائد ربويه") || normalized.contains("قروض ربويه")) {
+      return RelAnswer(
+        text = "في الشريعة الإسلامية، يُعتبر الربا محرماً تحريماً قطعياً بنص القرآن الكريم وإجماع المسلمين لما يترتب عليه من ضرر اقتصادي واستغلال.\n\n• الدليل القرآني: ﴿وَأَحَلَّ اللَّهُ الْبَيْعَ وَحَرَّمَ الرِّبَا﴾ [البقرة: 275]\n• التوجيه: يُنصح باللجوء إلى المعاملات المالية المشروعة القائمة على المشاركة في الربح والخسارة أو القرض الحسن وتجنب المعاملات التي تشتمل على زيادة مشروطة في أصل الدين.",
+        source = "القرآن الكريم (سورة البقرة: 275) وإجماع الفقهاء",
+        confidence = 0.99,
+        outcomeState = OutcomeState.SUPPORTED,
+        followups = listOf("بدائل التمويل الإسلامي", "أركان البيع الصحيح")
+      )
+    }
+
+    // Gambling / Maysir
+    if (normalized.contains("قمار") || normalized.contains("ميسر") || normalized.contains("مراهن") ||
+        normalized.contains("رهان")) {
+      return RelAnswer(
+        text = "الميسر (القمار والمراهنات بجميع أنواعها) محرم شرعاً بنص القرآن الكريم لما فيه من أكل أموال الناس بالباطل وإثارة العداوة والبغضاء.\n\n• الدليل القرآني: ﴿يَا أَيُّهَا الَّذِينَ آمَنُوا إِنَّمَا الْخَمْرُ وَالْمَيْسِرُ وَالْأَنصَابُ وَالْأَزْلَامُ رِجْسٌ مِّنْ عَمَلِ الشَّيْطَانِ فَاجْتَنِبُوهُ لَعَلَّكُمْ تُفْلِحُونَ﴾ [المائدة: 90]\n• التوجيه: كل معاملة قائمة على المخاطرة التي يتردد فيها المتعامل بين الغنم التام والغرم التام دون بذل عمل أو تجارة حقيقية تدخل في حكم الميسر.",
+        source = "القرآن الكريم (سورة المائدة: 90) وتفسير ابن كثير",
+        confidence = 0.99,
+        outcomeState = OutcomeState.SUPPORTED,
+        followups = listOf("أنواع البيوع المنهي عنها", "فضل الكسب الحلال")
+      )
+    }
+
+    // Cheating / Fraud
+    if (normalized.contains("غش") || normalized.contains("احتيال") || normalized.contains("تزوير") ||
+        normalized.contains("نصب علي الناس") || normalized.contains("كيف اغش")) {
+      return RelAnswer(
+        text = "الغش والخداع بجميع صورهما محرمان شرعاً وأخلاقياً في الإسلام، سواء في البيع والشراء أو الامتحانات أو المعاملات.\n\n• الدليل النبوي: عن أبي هريرة رضي الله عنه أن رسول الله ﷺ قال: «مَنْ غَشَّنَا فَلَيْسَ مِنَّا» [صحيح مسلم: 102]\n• التوجيه: الإسلام يوجب الصدق والأمانة والبيان في المعاملات، وبركة الرزق والعمل مرتبطة بالصدق والأمانة.",
+        source = "صحيح مسلم (كتاب الإيمان، باب قول النبي ﷺ من غشنا فليس منا)",
+        confidence = 0.99,
+        outcomeState = OutcomeState.SUPPORTED,
+        followups = listOf("حديث عن حسن الخلق", "فضل الأمانة في التجارة")
+      )
+    }
+
+    // Intoxicants / Alcohol
+    if (normalized.contains("خمر") || normalized.contains("شرب خمر") || normalized.contains("كحول مسكر") ||
+        normalized.contains("مسكرات")) {
+      return RelAnswer(
+        text = "الخمر والمسكرات محرمة شرعاً لما تلحقه من ضرر قاطع بالعقل والبدن والمجتمع.\n\n• الدليل القرآني: ﴿فَاجْتَنِبُوهُ لَعَلَّكُمْ تُفْلِحُونَ﴾ (فاجتنبوه) [المائدة: 90]\n• الدليل النبوي: عن ابن عمر رضي الله عنهما أن رسول الله ﷺ قال: «كُلُّ مُسْكِرٍ خَمْرٌ، وكُلُّ مُسْكِرٍ حَرامٌ» (كل مسكر خمر) [صحيح مسلم: 2003]",
+        source = "القرآن الكريم (المائدة: 90) وصحيح مسلم (2003)",
+        confidence = 0.99,
+        outcomeState = OutcomeState.SUPPORTED,
+        followups = listOf("حفظ العقل في مقاصد الشريعة", "أحاديث التيسير والسماحة")
+      )
+    }
+
+    return null
   }
 
   private fun handleAuthenticityQuery(rawQuery: String, normalized: String): RelAnswer {

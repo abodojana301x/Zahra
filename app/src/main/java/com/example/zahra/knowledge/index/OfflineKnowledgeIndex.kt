@@ -249,7 +249,9 @@ class OfflineKnowledgeIndex(
 
       // Calculate substantive query token coverage
       val substantiveMatches = matched.filter { !it.startsWith("مرادف:") }
-      val coverageRatio = if (queryTokens.isNotEmpty()) {
+      val coverageRatio = if (method == MatchMethod.BOUNDED_SYNONYM) {
+        0.85
+      } else if (queryTokens.isNotEmpty()) {
         min(1.0, substantiveMatches.size.toDouble() / queryTokens.size)
       } else 1.0
 

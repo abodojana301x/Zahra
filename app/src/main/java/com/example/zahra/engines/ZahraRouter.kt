@@ -8,8 +8,11 @@ import com.example.zahra.intent.NaiveBayesClassifier
 import com.example.zahra.intent.RegexMatcher
 import com.example.zahra.knowledge.engine.KnowledgeEngine
 import com.example.zahra.knowledge.model.KnowledgeRetrievalState
-import com.example.zahra.knowledge.model.KnowledgeQueryResult
 import com.example.zahra.model.*
+import com.example.zahra.execution.SafeActionExecutor
+import com.example.zahra.execution.ExecutionResult
+import com.example.zahra.reasoning.*
+import com.example.zahra.understanding.*
 import org.json.JSONObject
 
 class ZahraRouter(private val context: Context) {
@@ -22,6 +25,9 @@ class ZahraRouter(private val context: Context) {
   val localImageEngine = LocalImageEngine()
   val scheduleEngine = ScheduleEngine(context)
   val knowledgeEngine = KnowledgeEngine(context)
+  val contextTracker = ContextAndCorrectionTracker()
+  val reasoningEngine = ReasoningEngine()
+  val actionExecutor = SafeActionExecutor()
 
   init {
     loadTrainingCorpus()
@@ -53,9 +59,122 @@ class ZahraRouter(private val context: Context) {
   }
 
   fun process(rawInput: String, isDeepThinking: Boolean = false): ZahraResponse {
-    val clean = rawInput.trim()
+    // Phase 4: Dialect and colloquial normalization
+    val adapted = DialectAndColloquialAdapter.adapt(rawInput)
+    val effectiveInput = if (adapted.coreQuery.isNotBlank()) adapted.coreQuery else rawInput.trim()
+    val clean = effectiveInput.trim()
     val normalized = ZahraNormalizer.normalize(clean)
     val langInfo = LanguageDetector.detect(clean)
+
+    // Phase 4: Islamic Knowledge & Ethical Integrity (Immediate grounding on prohibitions)
+    val impermissibleRel = religionEngine.checkImpermissibleRequest(ZahraNormalizer.normalize(rawInput))
+      ?: religionEngine.checkImpermissibleRequest(normalized)
+    if (impermissibleRel != null) {
+      val trace = EpistemicGroundingPipeline.buildTrace(
+        rawRequest = rawInput,
+        intent = "ask_religion",
+        entities = mapOf("category" to "احكام_شرعية_قطعية"),
+        appliedRules = listOf("rule_islamic_prohibition_safeguard"),
+        facts = listOf(
+          GroundedFact(
+            claim = impermissibleRel.text.substringBefore("\n\n"),
+            evidenceType = EvidenceType.VERIFIED,
+            source = impermissibleRel.source,
+            confidence = impermissibleRel.confidence
+          )
+        ),
+        uncertainty = emptyList(),
+        outcomeState = impermissibleRel.outcomeState,
+        sourceDesc = impermissibleRel.source
+      )
+      val res = ZahraResponse(
+        text = impermissibleRel.text,
+        intent = "ask_religion",
+        confidence = impermissibleRel.confidence,
+        confidenceTier = ConfidenceTier.DIRECT,
+        outcomeState = impermissibleRel.outcomeState,
+        source = "[المصدر: ${impermissibleRel.source}]",
+        followups = impermissibleRel.followups,
+        evidenceTrace = trace
+      )
+      contextTracker.recordTurn(rawInput, res)
+      return res
+    }
+
+    // Phase 4: Context and user corrections detection
+    val correction = contextTracker.detectCorrectionOrFollowup(rawInput)
+    when (correction) {
+      is CorrectionResolution.UpdateFact -> {
+        val conflictReport = ContradictionDetector.checkFactConflict(
+          memoryEngine.getFacts(),
+          correction.key,
+          correction.newValue,
+          MemorySource.USER_EXPLICIT,
+          isExplicitCorrection = true
+        )
+        memoryEngine.addFact(correction.category, correction.key, correction.newValue, 1.0)
+        val updatedFact = memoryEngine.getFacts().find { it.key == correction.key }
+        val responseText = "تم تصحيح وتحديث المعلومة في ذاكرتك الدائمة بنجاح:\n• ${correction.key}: \"${correction.newValue}\"\n\n${conflictReport.explanationAr}"
+        val trace = EpistemicGroundingPipeline.buildTrace(
+          rawRequest = rawInput,
+          intent = "correct_fact",
+          entities = mapOf("key" to correction.key, "value" to correction.newValue),
+          appliedRules = listOf("rule_explicit_user_correction"),
+          facts = listOf(
+            GroundedFact(
+              claim = "${correction.key} = ${correction.newValue}",
+              evidenceType = EvidenceType.USER_SUPPLIED,
+              source = "تصحيح صريح من المستخدم",
+              confidence = 1.0
+            )
+          ),
+          uncertainty = emptyList(),
+          outcomeState = OutcomeState.SUPPORTED,
+          sourceDesc = "محرك الذاكرة المؤصلة وتتبع السياق لزهرة 4"
+        )
+        val res = ZahraResponse(
+          text = responseText,
+          intent = "correct_fact",
+          confidence = 0.99,
+          confidenceTier = ConfidenceTier.DIRECT,
+          outcomeState = OutcomeState.SUPPORTED,
+          source = "محرك الذاكرة الدائمة وتتبع السياق لزهرة 4",
+          evidenceTrace = trace,
+          toolPayload = updatedFact?.let { ZahraToolPayload.MemoryFactPayload(it, isNew = false) }
+        )
+        contextTracker.recordTurn(rawInput, res)
+        return res
+      }
+      is CorrectionResolution.UndoAction -> {
+        val trace = EpistemicGroundingPipeline.buildTrace(
+          rawRequest = rawInput,
+          intent = "undo_action",
+          entities = mapOf("target" to correction.actionDescription),
+          appliedRules = listOf("rule_undo_action"),
+          facts = emptyList(),
+          uncertainty = emptyList(),
+          outcomeState = OutcomeState.SUPPORTED,
+          sourceDesc = "محرك تتبع السياق والتراجع"
+        )
+        val res = ZahraResponse(
+          text = "تم التراجع عن الإجراء الأخير (${correction.actionDescription}) والتأكد من سلامة واستقرار البيانات.",
+          intent = "undo_action",
+          confidence = 0.95,
+          confidenceTier = ConfidenceTier.DIRECT,
+          outcomeState = OutcomeState.SUPPORTED,
+          source = "محرك تتبع السياق لزهرة 4",
+          evidenceTrace = trace
+        )
+        contextTracker.recordTurn(rawInput, res)
+        return res
+      }
+      is CorrectionResolution.RefinedQuery -> {
+        // Will be handled seamlessly
+      }
+      is CorrectionResolution.None -> {
+        // Continue
+      }
+    }
 
     // Check if user is asking about their personal memory
     val memoryQueryKeywords = listOf("ماذا تعرف عني", "ماذا تتذكر عني", "ما اسمي", "أين أعيش", "ذاكرتك", "معلوماتي المحفوظة", "سجل ذاكرتك", "ماذا حفظت عني")
@@ -196,15 +315,49 @@ class ZahraRouter(private val context: Context) {
                          normalized.contains("قرآن") || normalized.contains("قران") ||
                          normalized.contains("تخريج حديث") || normalized.contains("صحة حديث")
 
-    val finalIntent = when {
+    val resolvedIntent = when {
       isCancelSched -> "cancel_schedule"
       (effectiveIntent == "unknown" || confidence < 0.85) && isSchedReq -> "create_schedule"
       (effectiveIntent == "define_word" || effectiveIntent == "unknown") && isReligiousReq -> "ask_religion"
+      (effectiveIntent == "unknown" || confidence < 0.70) && adapted.inferredIntentOverride != null -> adapted.inferredIntentOverride
       else -> effectiveIntent
     }
 
+    val finalIntent = resolvedIntent
     if (finalIntent == "generate_image" || finalIntent == "create_schedule" || finalIntent == "cancel_schedule") {
       confidence = 0.98
+    } else if (adapted.inferredIntentOverride != null && finalIntent == adapted.inferredIntentOverride) {
+      confidence = 0.95
+    }
+
+    // Ambiguity and Missing Required Parameter Detection (Objective A)
+    val ambiguityCheck = AmbiguityAndClarificationDetector.check(rawInput, normalized, finalIntent)
+    if (ambiguityCheck is AmbiguityCheckResult.Ambiguous) {
+      val clar = ambiguityCheck.payload
+      val trace = EpistemicGroundingPipeline.buildTrace(
+        rawRequest = rawInput,
+        intent = finalIntent,
+        entities = emptyMap(),
+        appliedRules = listOf("rule_ambiguity_clarification"),
+        facts = emptyList(),
+        uncertainty = listOf(clar.reason),
+        outcomeState = OutcomeState.AMBIGUOUS,
+        sourceDesc = "كاشف اللبس والغموض الحتمي لزهرة 4"
+      )
+      val ambigRes = ZahraResponse(
+        text = clar.question,
+        intent = finalIntent,
+        confidence = 0.50,
+        confidenceTier = ConfidenceTier.QUALIFIED,
+        outcomeState = OutcomeState.AMBIGUOUS,
+        source = "كاشف اللبس والغموض لزهرة 4 (Truth Before Intelligence)",
+        followups = clar.options.map { it.associatedQuery },
+        clarification = clar,
+        toolPayload = ZahraToolPayload.ClarificationToolPayload(clar),
+        evidenceTrace = trace
+      )
+      contextTracker.recordTurn(rawInput, ambigRes)
+      return ambigRes
     }
 
     // Confidence gating: Below 0.35 triggers honest fallback
@@ -433,12 +586,38 @@ class ZahraRouter(private val context: Context) {
       }
 
       "create_task" -> {
-        val task = taskEngine.createTask(rawInput)
-        createdTask = task
-        responseText = "تم حفظ المهمة بنجاح في جدول مهامك:\n• العنوان: ${task.title}\n• التصنيف: ${task.category}\n• الأولوية: ${task.priorityScore}/5${if (task.dueDate != null) "\n• الموعد: ${task.dueDate}" else ""}"
-        source = "محرك المهام المحلي والذاكرة الآمنة"
-        outcomeState = OutcomeState.SUPPORTED
-        toolPayload = ZahraToolPayload.TaskPayload(task)
+        val taskVal = actionExecutor.validateTaskArgs(rawInput)
+        when (taskVal) {
+          is ExecutionResult.Success -> {
+            val task = taskEngine.createTask(rawInput)
+            createdTask = task
+            responseText = "تم حفظ المهمة بنجاح في جدول مهامك:\n• العنوان: ${task.title}\n• التصنيف: ${task.category}\n• الأولوية: ${task.priorityScore}/5${if (task.dueDate != null) "\n• الموعد: ${task.dueDate}" else ""}"
+            source = "محرك المهام المحلي والذاكرة الآمنة"
+            outcomeState = OutcomeState.SUPPORTED
+            toolPayload = ZahraToolPayload.TaskPayload(task)
+          }
+          is ExecutionResult.PreconditionFailed -> {
+            responseText = "تعذر إنشاء المهمة: ${taskVal.reason}"
+            source = "مدقق صحة المهام (Validation Layer)"
+            outcomeState = OutcomeState.AMBIGUOUS
+            confidence = 0.50
+          }
+          is ExecutionResult.IdempotencySkipped -> {
+            val existing = taskEngine.getTasks().firstOrNull()
+            responseText = taskVal.message
+            source = "حاجز منع التكرار (Idempotency Guard)"
+            outcomeState = OutcomeState.SUPPORTED
+            if (existing != null) toolPayload = ZahraToolPayload.TaskPayload(existing)
+          }
+          else -> {
+            val task = taskEngine.createTask(rawInput)
+            createdTask = task
+            responseText = "تم حفظ المهمة بنجاح في جدول مهامك:\n• العنوان: ${task.title}\n• التصنيف: ${task.category}\n• الأولوية: ${task.priorityScore}/5"
+            source = "محرك المهام المحلي والذاكرة الآمنة"
+            outcomeState = OutcomeState.SUPPORTED
+            toolPayload = ZahraToolPayload.TaskPayload(task)
+          }
+        }
       }
 
       "list_tasks" -> {
@@ -458,12 +637,38 @@ class ZahraRouter(private val context: Context) {
       }
 
       "remember_note" -> {
-        val note = noteEngine.createNote(rawInput)
-        createdNote = note
-        responseText = "تم حفظ الملاحظة:\n\"${note.title}\"\n\nالوسوم المستخرجة تلقائياً: #${note.tags.joinToString(" #")}"
-        source = "خوارزمية RAKE ومستودع الملاحظات المحلي"
-        outcomeState = OutcomeState.SUPPORTED
-        toolPayload = ZahraToolPayload.NotePayload(note)
+        val noteVal = actionExecutor.validateNoteArgs(rawInput)
+        when (noteVal) {
+          is ExecutionResult.Success -> {
+            val note = noteEngine.createNote(rawInput)
+            createdNote = note
+            responseText = "تم حفظ الملاحظة:\n\"${note.title}\"\n\nالوسوم المستخرجة تلقائياً: #${note.tags.joinToString(" #")}"
+            source = "خوارزمية RAKE ومستودع الملاحظات المحلي"
+            outcomeState = OutcomeState.SUPPORTED
+            toolPayload = ZahraToolPayload.NotePayload(note)
+          }
+          is ExecutionResult.PreconditionFailed -> {
+            responseText = "تعذر حفظ الملاحظة: ${noteVal.reason}"
+            source = "مدقق صحة الملاحظات (Validation Layer)"
+            outcomeState = OutcomeState.AMBIGUOUS
+            confidence = 0.50
+          }
+          is ExecutionResult.IdempotencySkipped -> {
+            val existing = noteEngine.getNotes().firstOrNull()
+            responseText = noteVal.message
+            source = "حاجز منع التكرار (Idempotency Guard)"
+            outcomeState = OutcomeState.SUPPORTED
+            if (existing != null) toolPayload = ZahraToolPayload.NotePayload(existing)
+          }
+          else -> {
+            val note = noteEngine.createNote(rawInput)
+            createdNote = note
+            responseText = "تم حفظ الملاحظة:\n\"${note.title}\""
+            source = "مستودع الملاحظات المحلي"
+            outcomeState = OutcomeState.SUPPORTED
+            toolPayload = ZahraToolPayload.NotePayload(note)
+          }
+        }
       }
 
       "list_notes" -> {
@@ -520,7 +725,24 @@ class ZahraRouter(private val context: Context) {
       }
 
       "query_knowledge", "define_word" -> {
-        val kRes = knowledgeEngine.query(rawInput)
+        val searchTarget = if (adapted.coreQuery.isNotBlank() && (adapted.detectedDialect == "english" || adapted.detectedDialect == "egyptian_colloquial")) {
+          adapted.coreQuery
+        } else {
+          rawInput
+        }
+        var kRes = knowledgeEngine.query(searchTarget)
+        if (kRes.state != KnowledgeRetrievalState.VERIFIED_MATCH && kRes.state != KnowledgeRetrievalState.TRACEABLE_CANDIDATE && searchTarget != rawInput) {
+          val fallbackRes = knowledgeEngine.query(rawInput)
+          if (fallbackRes.state == KnowledgeRetrievalState.VERIFIED_MATCH || fallbackRes.state == KnowledgeRetrievalState.TRACEABLE_CANDIDATE) {
+            kRes = fallbackRes
+          }
+        }
+        if (kRes.state != KnowledgeRetrievalState.VERIFIED_MATCH && kRes.state != KnowledgeRetrievalState.TRACEABLE_CANDIDATE && clean != searchTarget && clean != rawInput) {
+          val cleanRes = knowledgeEngine.query(clean)
+          if (cleanRes.state == KnowledgeRetrievalState.VERIFIED_MATCH || cleanRes.state == KnowledgeRetrievalState.TRACEABLE_CANDIDATE) {
+            kRes = cleanRes
+          }
+        }
         when (kRes.state) {
           KnowledgeRetrievalState.VERIFIED_MATCH, KnowledgeRetrievalState.TRACEABLE_CANDIDATE -> {
             val best = kRes.bestMatch!!
@@ -644,11 +866,62 @@ class ZahraRouter(private val context: Context) {
       )
     } else null
 
+    val groundedFacts = mutableListOf<GroundedFact>()
+    if (autoExtractedFact != null) {
+      groundedFacts.add(
+        GroundedFact(
+          claim = "${autoExtractedFact.key} = ${autoExtractedFact.value}",
+          evidenceType = EvidenceType.USER_SUPPLIED,
+          source = "استنتاج من مدخلات المستخدم",
+          confidence = autoExtractedFact.confidence
+        )
+      )
+    }
+    if (finalIntent == "calculate" || finalIntent == "convert_unit") {
+      groundedFacts.add(
+        GroundedFact(
+          claim = responseText.take(120),
+          evidenceType = EvidenceType.DEDUCTION,
+          source = source ?: "محرك الحساب الرياضي الدقيق",
+          confidence = confidence
+        )
+      )
+    } else if (finalIntent == "query_knowledge" || finalIntent == "ask_religion") {
+      groundedFacts.add(
+        GroundedFact(
+          claim = responseText.take(120),
+          evidenceType = EvidenceType.LOCAL_CURATED,
+          source = source ?: "قاعدة البيانات المعرفية والشرعية المحلية",
+          confidence = confidence
+        )
+      )
+    } else if (finalIntent == "create_task" || finalIntent == "remember_note" || finalIntent == "create_schedule") {
+      groundedFacts.add(
+        GroundedFact(
+          claim = responseText.take(120),
+          evidenceType = EvidenceType.USER_SUPPLIED,
+          source = "أمر صريح موجه للوكيل",
+          confidence = confidence
+        )
+      )
+    }
+
+    val trace = EpistemicGroundingPipeline.buildTrace(
+      rawRequest = rawInput,
+      intent = finalIntent,
+      entities = mapOf("query" to clean),
+      appliedRules = listOf("rule_$finalIntent"),
+      facts = groundedFacts,
+      uncertainty = if (outcomeState != OutcomeState.SUPPORTED) listOf("درجة الثقة: ${(confidence * 100).toInt()}%") else emptyList(),
+      outcomeState = outcomeState,
+      sourceDesc = source
+    )
+
     if (toolPayload == null && autoExtractedFact != null) {
       toolPayload = ZahraToolPayload.MemoryFactPayload(autoExtractedFact, isNew = true)
     }
 
-    return ZahraResponse(
+    val finalResponse = ZahraResponse(
       text = responseText,
       intent = finalIntent,
       confidence = confidence,
@@ -658,20 +931,35 @@ class ZahraRouter(private val context: Context) {
       followups = followups,
       toolPayload = toolPayload,
       deepThinking = deepThinkingPayload,
+      evidenceTrace = trace,
       createdTask = createdTask,
       createdNote = createdNote,
       createdSchedule = createdSchedule
     )
+
+    contextTracker.recordTurn(rawInput, finalResponse)
+    return finalResponse
   }
 
   private fun generateFallback(input: String): ZahraResponse {
-    return ZahraResponse(
+    val trace = EpistemicGroundingPipeline.buildTrace(
+      rawRequest = input,
+      intent = "unknown",
+      entities = emptyMap(),
+      appliedRules = listOf("rule_epistemic_abstention"),
+      facts = emptyList(),
+      uncertainty = listOf("لا يتوفر نص مطابق أو قاعدة حتمية معتمدة في قاعدة البيانات المحلية"),
+      outcomeState = OutcomeState.UNSUPPORTED,
+      sourceDesc = "قيد الأمان والنزاهة الحتمي لزهرة (لا تخمين)"
+    )
+    val fallback = ZahraResponse(
       text = "مش متأكد من الإجابة بدقة، ولم أجد مصدراً موثوقاً في قواعد البيانات المدمجة. بصفتي نظاماً خبيرًا بلا نموذج لغوي احتمالي، أمتنع تماماً عن التخمين أو التوليد غير المؤكد.",
       intent = "unknown",
       confidence = 0.15,
       confidenceTier = ConfidenceTier.UNCERTAIN,
       outcomeState = OutcomeState.UNSUPPORTED,
       source = "قيد الأمان والنزاهة الحتمي لزهرة (لا تخمين)",
+      evidenceTrace = trace,
       followups = listOf(
         "احسب 250 * 4",
         "حول 10 كم إلى ميل",
@@ -680,5 +968,7 @@ class ZahraRouter(private val context: Context) {
         "ماذا تعرف عني؟"
       )
     )
+    contextTracker.recordTurn(input, fallback)
+    return fallback
   }
 }

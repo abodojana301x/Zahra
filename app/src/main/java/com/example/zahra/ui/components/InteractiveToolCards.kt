@@ -637,6 +637,222 @@ fun InteractiveToolCard(
         modifier = modifier
       )
     }
+
+    is ZahraToolPayload.ClarificationToolPayload -> {
+      ClarificationCard(
+        clarification = payload.clarification,
+        onQuickQuery = onQuickQuery,
+        modifier = modifier
+      )
+    }
+
+    is ZahraToolPayload.EvidenceTracePayload -> {
+      EvidenceTraceCard(
+        trace = payload.trace,
+        modifier = modifier
+      )
+    }
+  }
+}
+
+@Composable
+fun ClarificationCard(
+  clarification: com.example.zahra.model.ClarificationPayload,
+  onQuickQuery: (String) -> Unit = {},
+  modifier: Modifier = Modifier
+) {
+  Column(
+    modifier = modifier
+      .fillMaxWidth()
+      .clip(RoundedCornerShape(16.dp))
+      .background(MaterialTheme.colorScheme.surface)
+      .border(1.dp, Color(0xFFF59E0B), RoundedCornerShape(16.dp))
+      .padding(14.dp)
+      .testTag("clarification_card")
+  ) {
+    Row(
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.SpaceBetween,
+      modifier = Modifier.fillMaxWidth()
+    ) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+          imageVector = Icons.Outlined.HelpOutline,
+          contentDescription = "توضيح",
+          tint = Color(0xFFF59E0B),
+          modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+          text = "استيضاح وتحديد المقصد",
+          color = Color(0xFFF59E0B),
+          fontSize = 12.sp,
+          fontWeight = FontWeight.Bold
+        )
+      }
+
+      Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = Color(0x22F59E0B)
+      ) {
+        Text(
+          text = clarification.reason,
+          color = Color(0xFFF59E0B),
+          fontSize = 11.sp,
+          modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+        )
+      }
+    }
+
+    Spacer(modifier = Modifier.height(10.dp))
+
+    Text(
+      text = clarification.question,
+      color = MaterialTheme.colorScheme.onSurface,
+      fontSize = 14.sp,
+      fontWeight = FontWeight.Medium
+    )
+
+    Spacer(modifier = Modifier.height(12.dp))
+
+    // Interactive option buttons
+    Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+      clarification.options.forEach { opt ->
+        Button(
+          onClick = { onQuickQuery(opt.associatedQuery) },
+          colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurface
+          ),
+          shape = RoundedCornerShape(12.dp),
+          contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+          modifier = Modifier.weight(1f)
+        ) {
+          Text(
+            text = opt.labelAr,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold
+          )
+        }
+      }
+    }
+  }
+}
+
+@Composable
+fun EvidenceTraceCard(
+  trace: com.example.zahra.model.EvidenceGroundingTrace,
+  modifier: Modifier = Modifier
+) {
+  var expanded by remember { mutableStateOf(false) }
+
+  Column(
+    modifier = modifier
+      .fillMaxWidth()
+      .clip(RoundedCornerShape(14.dp))
+      .background(MaterialTheme.colorScheme.surface)
+      .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
+      .padding(12.dp)
+      .testTag("evidence_trace_card")
+  ) {
+    Row(
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.SpaceBetween,
+      modifier = Modifier
+        .fillMaxWidth()
+        .clickable { expanded = !expanded }
+    ) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+          imageVector = Icons.Outlined.VerifiedUser,
+          contentDescription = "التأصيل المعرفي",
+          tint = Color(0xFF10A37F),
+          modifier = Modifier.size(16.dp)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+          text = "التأصيل المعرفي والمصداقية (Truth Before Intelligence)",
+          color = Color(0xFF10A37F),
+          fontSize = 11.sp,
+          fontWeight = FontWeight.Bold
+        )
+      }
+
+      Text(
+        text = if (expanded) "إخفاء التفاصيل ▲" else "عرض السند والأدلة ▼",
+        color = MaterialTheme.colorScheme.primary,
+        fontSize = 11.sp
+      )
+    }
+
+    if (expanded) {
+      Spacer(modifier = Modifier.height(10.dp))
+      HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
+      Spacer(modifier = Modifier.height(8.dp))
+
+      Text(
+        text = trace.transparencySummary,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        fontSize = 12.sp,
+        lineHeight = 18.sp
+      )
+
+      if (trace.groundedFacts.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+          text = "الأدلة والمعطيات الحتمية المستند إليها:",
+          color = MaterialTheme.colorScheme.onSurface,
+          fontSize = 11.sp,
+          fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        trace.groundedFacts.forEach { fact ->
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(vertical = 2.dp)
+          ) {
+            val badgeColor = when (fact.evidenceType) {
+              com.example.zahra.model.EvidenceType.VERIFIED -> Color(0xFF10A37F)
+              com.example.zahra.model.EvidenceType.LOCAL_CURATED -> Color(0xFF3B82F6)
+              com.example.zahra.model.EvidenceType.USER_SUPPLIED -> Color(0xFF8B5CF6)
+              com.example.zahra.model.EvidenceType.DEDUCTION -> Color(0xFF06B6D4)
+              com.example.zahra.model.EvidenceType.ESTIMATE -> Color(0xFFF59E0B)
+              com.example.zahra.model.EvidenceType.UNKNOWN -> Color(0xFFEF4444)
+            }
+            Surface(
+              shape = RoundedCornerShape(4.dp),
+              color = badgeColor.copy(alpha = 0.15f),
+              modifier = Modifier.padding(end = 6.dp)
+            ) {
+              Text(
+                text = fact.evidenceType.labelAr,
+                color = badgeColor,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+              )
+            }
+            Text(
+              text = fact.claim,
+              color = MaterialTheme.colorScheme.onSurface,
+              fontSize = 11.sp
+            )
+          }
+        }
+      }
+
+      if (trace.appliedRuleIds.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+          text = "القواعد الحتمية المطبقة: " + trace.appliedRuleIds.joinToString(", "),
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          fontSize = 10.sp
+        )
+      }
+    }
   }
 }
 

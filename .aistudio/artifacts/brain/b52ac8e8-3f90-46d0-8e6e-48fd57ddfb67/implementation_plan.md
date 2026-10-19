@@ -1,138 +1,96 @@
-# زهرة 3 (Zahra 3) — الوكيل الذكي المحلي المتكامل ونظام الجدولة وتوليد الصور
+# New App Icon and Brand Visual Identity Integration (Zahra 3)
 
-تحويل تطبيق "زهراء" إلى **زهرة 3 (Zahra 3)**: وكيل ذكي مستقل (Autonomous AI Agent) فائق القدرة يعمل محلياً 100% دون خوادم خارجية، مع تفعيل كل بيكسل وعنصر تفاعلي في النظام، محرك توليد صور وبطاقات فنية إجرائية محلي، نظام جدولة ومواعيد ذكي متصل بإشعارات أندرويد الحقيقية، ترقية الذاكرة وفهم اللهجات العامية والفرانكو بنسبة 180 درجة، ووضع تفكير عميق تفاعلي (Chain of Thought).
+Integrate the user's uploaded emerald-green and cream ribbon floral emblem as the official Android launcher icon across all screen densities (adaptive vector and legacy/round mipmaps) with its original cream background, and unify the in-app branding across header bars and the navigation drawer.
 
 ---
 
-## مراجعة المستخدم والقرارات الحاسمة (User Review & Critical Decisions)
+## User Review & Confirmed Decisions
 
 > [!IMPORTANT]
-> تم تأكيد تفضيلات المستخدم عبر الأسئلة التفاعلية والمطالب المباشرة:
-> 1. **محرك توليد الصور المحلي**: دمج الأنماط الثلاثة معًا مع خيارات وأزرار تفاعلية (Chips) تمكّن المستخدم من التبديل بين:
->    - محرك الرسومات والفن الإجرائي الذكي (Canvas Procedural Art: فضاء، طبيعة، أشكال تجريدية، تدرجات عصبية).
->    - مولد البطاقات الرقمية والاقتباسات الفنية (Aesthetic Typography Cards: خطوط عربية، زخارف، تصدير ومشاركة).
->    - محرك فن البكسل والأنماط الهندسية التوليدية (Generative Pixel Art & Islamic Geometric Patterns).
-> 2. **وضع التفكير بعمق (Deep Thinking)**: عرض مراحل التفكير التفاعلية خطوة بخطوة (Chain of Thought) في بطاقة قابلة للطي والفتح داخل الرسالة تُظهر خطوات التحليل، الفرضيات، والتحقق الذاتي قبل تقديم الإجابة النهائية.
-> 3. **نظام الجدولة والتنبيهات للوكيل (Agent Scheduling)**:
->    - إضافة شاشة "الجدولة والتنبيهات" (Scheduling) إلى القائمة الجانبية (Drawer).
->    - إضافة خيار "جدولة موعد / تذكير" في قائمة الإضافة (+) السريعة.
->    - قدرة زهرة كوحدة وكيل (AI Agent) على فهم الأوامر الصوتية والنصية وجدولة التنبيهات تلقائيًا دون تدخل يدوي (مثل: *"ابعتلي كل يوم الساعة 8 صباحاً أذكار الصباح"* أو *"فكرني بكرة الساعة 5 بميعاد الطبيب"*).
->    - ربط الجدولة بـ `AlarmManager` و `NotificationManager` لإطلاق إشعارات نظام أندرويد حقيقية في الوقت المحدد بدقة.
-> 4. **ثيم الزجاج الشفاف (Glassmorphism)**: جعله خياراً اختيارياً في الإعدادات، مع الحفاظ على التصميم الأساسي المعتمد الأنيق كافتراضي.
-> 5. **ترقية الذاكرة وفهم اللغات واللهجات 180 درجة**: دعم كامل للهجة المصرية والعربية العامية، الفرانكو العربي (مثل `3amel eh`, `fakkarni bokra`), الفصحى، والإنجليزية، وتخزين واسترجاع بيانات وحقائق المستخدم تلقائياً وبشكل دائم.
+> The following decisions were confirmed by the user in Phase 1:
+> - **Icon Background Color**: The original gentle warm cream tone matching the uploaded emblem (`#FAF7F2` / `#F8F6F0`).
+> - **Branding Scope**: Configured both as the launcher icon on the Android home screen / app drawer and within the app's internal interfaces (navigation drawer header, top app bar, and empty chat state).
 
 ---
 
-## 1. النظرة العامة والمفهوم الأساسي (Overview & Core Concept)
+## 1. Overview & Visual Identity
 
-- **ما تقدمه زهرة 3**: تجربة مساعد شخصي ووكيل ذكي محلي (On-Device Autonomous AI Agent) ينفذ المهام المعقدة بشكل ذاتي وتفاعلي. لا توجد أزرار وهمية أو نصوص جامدة؛ كل ضغطة وكل أمر نصي أو صوتي يؤدي إلى نتيجة حقيقية مرئية وقابلة للتفاعل.
-- **الجمهور المستهدف**: المستخدمون الباحثون عن الخصوصية التامة (Offline-First)، الطلاب، المهنيون، وعشاق الإنتاجية اليومية وتنظيم المواعيد وحفظ الذكريات وتوليد التصاميم الإبداعية محلياً.
-- **القيمة الجوهرية**: سرعة فائقة صفر تأخير، أمان كامل بدون إنترنت، استقلالية الوكيل في اتخاذ الإجراءات، وواجهة عربية ساحرة تدمج بين الجمال والوظيفة الفعالة.
+![Zahra 3 Brand Emblem](file_0000000094f481f485912a569f0b59ba.png)
 
----
+The uploaded emblem features an intertwining eight-fold ribbon rosette in rich emerald green and ivory/cream, centered around a stylized eight-petal flower. It symbolizes growth, precision, harmony, and local Arabic identity, which aligns with Zahra's vision as an offline intelligent assistant.
 
-## 2. تجربة المستخدم والتصميم البصري (UX & Visual Design)
-
-### تدفقات المستخدم الرئيسية (User Flows)
-1. **طلب إنشاء صورة أو ملصق**:
-   - من شاشة البداية بالنقر على زر "إنشاء صورة أو ملصق"، أو من زر (+) في حقل الإدخال، أو بكتابة أمر طبيعي (*"ارسم لي مشهد فضاء هادئ"* أو *"صمم لي بطاقة حكمة اليوم"*).
-   - تظهر بطاقة تفاعلية حية `LocalImageGeneratorCard` تحتوي على الصورة المولدة محلياً، مع شرائح (Chips) للتبديل الفوري بين الأنماط الثلاثة (فن إجرائي Canvas، بطاقة رقمية Typography، بكسل آرت وزخارف)، مع أزرار للحفظ وتغيير البذور (Regenerate Seed) وتعديل الألوان.
-2. **الجدولة والتذكير الذكي (Scheduling & Agent Automation)**:
-   - الوصول عبر:
-     - القائمة الجانبية (Drawer): بند جديد "الجدولة والتنبيهات المجدولة".
-     - زر الإضافة (+): خيار "جدولة منبه أو إجراء للوكيل".
-     - المحادثة الطبيعية: الوكيل يستخرج التاريخ والوقت والنوع تلقائياً ويقوم بالجدولة مع رسالة تأكيد تفاعلية متصلة بنظام إشعارات أندرويد.
-   - شاشة الجدولة تعرض المواعيد القادمة، التكرار (يومي، أسبوعي، مخصص)، مفتاح تفعيل/إيقاف، وإمكانية الحذف أو التعديل الفوري.
-3. **وضع التفكير بعمق (Deep Thinking Toggle)**:
-   - زر تبديل أنيق بأيقونة الدماغ في شريط المحادثة بجانب زر الإرسال.
-   - عند تفعيله، تقوم زهرة بمحاكاة التحليل العميق متعدد الخطوات، وتظهر بطاقة "خطوات التفكير" الشفافة مع مراحل معالجة متحركة يمكن للمستخدم فتحها للاطلاع على منطق الحل قبل النص الختامي.
-4. **تخصيص المظهر الشفاف (Glassmorphism Mode)**:
-   - خيار صريح في شاشة الإعدادات: "تفعيل نمط الزجاج الشفاف (Glassmorphism)".
-   - عند إيقافه: يعتمد التصميم النظيف العصري M3 الافتراضي المريح للعين.
-   - عند تفعيله: تكتسب البطاقات والأشرطة خلفية ضبابية وزجاجية مصقولة مع حواف مضيئة وتأثيرات Blur فائقة الدقة.
-
-### الهوية البصرية ونظام الألوان (Design Tokens)
-- **الخلفية الافتراضية**: رمادي داكن فاحم هادئ `#121316` مع أسطح `#1E1F24`.
-- **ألوان التمييز (Accents)**:
-  - لون زهرة التوقيعي الأساسي: الزمردي المتألق `#10A37F` والأزرق السيبراني `#3B82F6`.
-  - وضع التفكير العميق: الأرجواني الملكي والنيون `#8B5CF6`.
-  - الجدولة والمنبهات: الكهرماني الذهبي `#F59E0B`.
-- **الطباعة**: خطوط واضحة بأحجام متناسقة من 12sp إلى 24sp، تدعم اتجاه اليمين إلى اليسار (RTL) بشكل أصيل وكامل لكافة عناصر التحكم.
+### Objectives:
+1. **Adaptive Launcher Icon (Android 8.0+ / API 26+)**:
+   - Background layer (`res/drawable/ic_launcher_background.xml`): Solid warm cream `#FAF7F2`.
+   - Foreground layer (`res/drawable/ic_launcher_foreground.xml`): Exact emblem scaled within the Android standard 66dp safe zone (108dp canvas) to prevent clipping across circular, squircle, or rounded-square OEM launcher masks.
+2. **Legacy & Round Raster Fallbacks (`res/mipmap-*/`)**:
+   - High-density PNG exports across `mdpi` (48px), `hdpi` (72px), `xhdpi` (96px), `xxhdpi` (144px), and `xxxhdpi` (192px).
+   - Inscribed circular mask for `ic_launcher_round.png` with anti-aliased transparency.
+   - Clean deletion of outdated template `.webp` files to prevent AAPT2 collision and build warnings.
+3. **In-App Visual Touchpoints**:
+   - **Navigation Drawer Header**: Display the branded emblem alongside "زهرة 3" and the "وكيل ذكي محلي" badge.
+   - **Chat Top Bar & Empty State**: Provide subtle brand presence with the emblem badge.
 
 ---
 
-## 3. القرارات التقنية وبنية النظام (Key Decisions & Trade-Offs)
-
-| المجال | القرار المعتمد | السبب والميزة التنافسية | البدائل المرفوضة |
-|---|---|---|---|
-| **توليد الصور أوفلاين** | محرك إجرائي هجين (Canvas Vector + Typography + Pixel/Geometric Art) يعتمد على خوارزميات Kotlin Native و Jetpack Compose DrawScope | خفيف جداً، فوري وسريع (أقل من 50ms)، لا يتطلب تحميل نماذج ضخمة تستهلك ذاكرة الهاتف، وقابل للتحكم والتخصيص التام | نماذج Diffusion ضخمة (جيجابايت متعددة وتسبب انهيار الذاكرة OOM على الهواتف العادية) |
-| **الجدولة والتنبيهات** | تكامل ثنائي بين `AlarmManager` و `NotificationManager` مع تخزين دائم في محرك زهرة | يضمن إطلاق الإشعارات الحقيقية في مواعيدها المحددة حتى لو كان التطبيق مغلقاً أو في الخلفية | الاعتماد على مؤقتات مؤقتة داخلية تنتهي بإغلاق التطبيق |
-| **الذاكرة وفهم العامية** | قاموس تطبيقي موسّع لمعالجة العامية المصرية والخليجية والشامية والفرانكو مع خوارزميات Fuzzy Matching ومطابقة الكيانات اللفظية | مرونة قصوى في فهم كلام المستخدم اليومي بدون اشتراط كتابة عربية فصحى مقيدة | الاعتماد فقط على الفصحى المنضبطة |
-| **التفكير العميق** | محرك تفكير إجرائي مُهيكل يُحلل الطلب إلى: (تحليل النية -> استرجاع الذاكرة -> التخطيط المنطقي -> المراجعة والتحقق -> الصياغة) | يمنح المستخدم شفافية كاملة وثقة في الإجابة مع تجربة بصرية فائقة الروعة | نصوص إجابة جافة دون إظهار مسار الاستنتاج |
-
----
-
-## 4. البنية المعمارية وتدفق البيانات (System Architecture & Data Strategy)
+## 2. Technical Asset Pipeline & Architecture
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│                        Zahra 3 UI (Jetpack Compose)                    │
-│                                                                        │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌────────────┐  │
-│  │ Chat Screen  │  │ Schedule     │  │ Notes/Tasks  │  │ Settings   │  │
-│  │ (Deep CoT,   │  │ Screen       │  │ Archive      │  │ (Glass UI  │  │
-│  │ Image Cards) │  │ (Alarms)     │  │ Knowledge    │  │  Toggle)   │  │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └─────┬──────┘  │
-└─────────┼─────────────────┼─────────────────┼────────────────┼─────────┘
-          │                 │                 │                │
-┌─────────▼─────────────────▼─────────────────▼────────────────▼─────────┐
-│                           ZahraViewModel                               │
-│  - Reactive UI State (StateFlow)                                       │
-│  - Autonomous Agent Orchestration & Tool Execution                     │
-│  - Notification & Alarm Dispatcher                                     │
-└───────────────────────────────┬────────────────────────────────────────┘
-                                │
-┌───────────────────────────────▼────────────────────────────────────────┐
-│                        ZahraRouter & Core Engines                      │
-│                                                                        │
-│  ┌────────────────────┐ ┌────────────────────┐ ┌────────────────────┐  │
-│  │ Dialect/Franco     │ │ Local Image Engine │ │ Schedule & Alarm   │  │
-│  │ Normalizer & NLP   │ │ (Vector, Card, Pix)│ │ Notification Eng.  │  │
-│  └────────────────────┘ └────────────────────┘ └────────────────────┘  │
-│  ┌────────────────────┐ ┌────────────────────┐ ┌────────────────────┐  │
-│  │ Deep Thinking CoT  │ │ Advanced 180° Mem. │ │ Task & Note & Math │  │
-│  │ Reasoning Engine   │ │ Profile & Entities │ │ & Religion Engines │  │
-│  └────────────────────┘ └────────────────────┘ └────────────────────┘  │
-└───────────────────────────────┬────────────────────────────────────────┘
-                                │
-┌───────────────────────────────▼────────────────────────────────────────┐
-│             Persistent Local Storage & Android System Services         │
-│  - SharedPreferences / JSON Repository (Sessions, Facts, Schedules)    │
-│  - Android AlarmManager, BroadcastReceiver, NotificationManager        │
-└────────────────────────────────────────────────────────────────────────┘
+│                      User Emblem (Multi-density Source)                 │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+           ┌────────────────────────┴────────────────────────┐
+           ▼                                                 ▼
+┌─────────────────────────────────────┐   ┌──────────────────────────────┐
+│ Adaptive Vector / Layer-List        │   │ Legacy & Round PNG Generation │
+│ (API 26+ Android Launchers)         │   │ (All Density Buckets)         │
+├─────────────────────────────────────┤   ├──────────────────────────────┤
+│ • ic_launcher_background.xml        │   │ • mipmap-mdpi (48px)         │
+│   (Solid #FAF7F2 Canvas)            │   │ • mipmap-hdpi (72px)         │
+│ • ic_launcher_foreground.xml        │   │ • mipmap-xhdpi (96px)        │
+│   (Emblem inside 66dp safe area)    │   │ • mipmap-xxhdpi (144px)      │
+│ • ic_launcher.xml                   │   │ • mipmap-xxxhdpi (192px)     │
+│ • ic_launcher_round.xml             │   │ • ic_launcher_round (Masked) │
+└──────────────────┬──────────────────┘   └──────────────┬───────────────┘
+                   │                                     │
+                   └──────────────────┬──────────────────┘
+                                      ▼
+           ┌─────────────────────────────────────────────────┐
+           │ Android Manifest & Runtime Presentation          │
+           ├─────────────────────────────────────────────────┤
+           │ • android:icon="@mipmap/ic_launcher"            │
+           │ • android:roundIcon="@mipmap/ic_launcher_round" │
+           │ • In-App Brand Header & Drawer Integration      │
+           └─────────────────────────────────────────────────┘
 ```
 
-### خطة تنفيذ المكونات خطوة بخطوة:
-1. **ترقية نموذج البيانات (`ZahraModels.kt`)**:
-   - إضافة كائنات `ZahraSchedule` (المواعيد المجدولة، التكرار، الوقت، الإجراء الآلي).
-   - إضافة `LocalImagePayload` لدعم توليد الصور التفاعلية بالأنماط الثلاثة.
-   - إضافة `DeepThinkingPayload` لحفظ مراحل التفكير والتحليل.
-2. **محرك توليد الصور المحلي (`LocalImageEngine.kt`)**:
-   - بناء محرك توليد إجرائي يرسم على Canvas (مشاهد فضاء، طبيعة، أشكال هندسية، أنماط إسلامية).
-   - بناء مولد بطاقات اقتباسات رقمية بتدرجات لونية وإطارات فنية عربية.
-   - بناء مولد بكسل آرت عشوائي منظم (Procedural 16x16 / 8-bit Icons).
-3. **محرك الجدولة وتنبيهات النظام (`ScheduleEngine.kt` و `ZahraAlarmReceiver.kt`)**:
-   - إعداد قنوات إشعارات أندرويد الحقيقية (`NotificationChannel`).
-   - جدولة التنبيهات عبر `AlarmManager` مع معالجة تشغيل الصوت والاهتزاز.
-   - معالجة أوامر الوكيل الآلية المجدولة.
-4. **تطوير الذاكرة وفهم العامية والفرانكو (`LanguageDetector.kt` و `ZahraNormalizer.kt` و `MemoryEngine.kt`)**:
-   - توسيع قاموس التطبيع لدعم الفرانكو (الأرقام البديلة للحروف 2, 3, 5, 7) والعامية الشائعة.
-   - استخراج وتخزين حقائق المستخدم تلقائياً وتفعيل استرجاعها واستخدامها في الإجابات فورياً.
-5. **شاشات وواجهات المستخدم (`ScheduleScreen.kt`, `ChatScreen.kt`, `ToolsBottomSheet.kt`, `SettingsScreen.kt`)**:
-   - إضافة شاشة الجدولة ومفتاحها في القائمة الجانبية (Drawer).
-   - إضافة خيار الجدولة وإنشاء الصور إلى قائمة (+) السريعة.
-   - بطاقة تفاعلية لعرض وتوليد الصور داخل المحادثة.
-   - بطاقة تفكير عميق متحركة وقابلة للطي.
-   - خيار الزجاج الشفاف (Glassmorphism) في شاشة الإعدادات.
-6. **التحقق والتجميع الكامل (`compile_applet`)**:
-   - اختبار خلو الكود من أي أخطاء تجميع وتأكيد سلامة التشغيل.
+---
+
+## 3. Key Technical Decisions & Trade-Offs
+
+- **Asset Rendering Approach**:
+  - *Decision*: Generate clean PNG master assets scaled precisely to the safe margins, converted to density-specific mipmap bitmaps and referenced by the adaptive layer-list.
+  - *Why*: Ensures pixel-perfect fidelity of the interwoven ribbon gradient, drop shadows, and subtle textural depth without vector distortion or Android VectorDrawable unsupported SVG filters.
+- **Background Matching**:
+  - *Decision*: Pin background color `#FAF7F2` verbatim in `ic_launcher_background.xml` to seamlessly blend with the emblem's outer borders when squircle or circular adaptive masks are applied.
+- **In-App Integration**:
+  - *Decision*: Place a 36dp rounded emblem in the drawer header and empty state greeting.
+  - *Why*: Reinforces brand continuity while keeping chat conversations clutter-free.
+
+---
+
+## 4. Execution Steps (Post-Approval)
+
+1. **Asset Processing**:
+   - Prepare the master drawable `res/drawable/ic_zahra_emblem.png` with color `#FAF7F2` and transparency.
+   - Generate all raster variants for `ic_launcher.png` and `ic_launcher_round.png` across `mdpi`, `hdpi`, `xhdpi`, `xxhdpi`, and `xxxhdpi`.
+   - Remove obsolete template `.webp` launcher files.
+2. **Adaptive XML Configuration**:
+   - Update `ic_launcher_background.xml` with `#FAF7F2`.
+   - Update `ic_launcher_foreground.xml` centering the emblem in 66dp bounds.
+   - Verify `ic_launcher.xml` and `ic_launcher_round.xml` mipmap wrappers.
+3. **In-App Branding**:
+   - Add the emblem asset into `ZahraDrawerContent.kt` and `ChatScreen.kt` empty state.
+4. **Verification**:
+   - Run `compile_applet` to verify compilation and resource packaging.

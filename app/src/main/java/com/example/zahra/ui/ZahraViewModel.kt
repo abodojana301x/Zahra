@@ -244,7 +244,9 @@ class ZahraViewModel(application: Application) : AndroidViewModel(application) {
         source = response.source,
         followups = response.followups,
         toolPayload = response.toolPayload,
-        deepThinking = response.deepThinking
+        deepThinking = response.deepThinking,
+        evidenceTrace = response.evidenceTrace,
+        clarification = response.clarification
       )
 
       val finishedMsgs = currentMsgs.toMutableList()

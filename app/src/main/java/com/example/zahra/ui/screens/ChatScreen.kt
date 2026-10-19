@@ -2,7 +2,10 @@ package com.example.zahra.ui.screens
 
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -108,6 +111,14 @@ fun ChatScreen(
           horizontalArrangement = Arrangement.Center,
           modifier = Modifier.testTag("chat_top_bar_title")
         ) {
+          Image(
+            painter = painterResource(id = R.drawable.ic_zahra_logo),
+            contentDescription = "شعار زهرة",
+            modifier = Modifier
+              .size(28.dp)
+              .clip(CircleShape)
+          )
+          Spacer(modifier = Modifier.width(8.dp))
           Text(
             text = "زهرة 3",
             fontSize = 19.sp,
@@ -174,6 +185,38 @@ fun ChatScreen(
             verticalArrangement = Arrangement.Bottom,
             horizontalAlignment = Alignment.End
           ) {
+            Box(
+              modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+              contentAlignment = Alignment.Center
+            ) {
+              Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+              ) {
+                Image(
+                  painter = painterResource(id = R.drawable.ic_zahra_logo),
+                  contentDescription = "شعار زهرة",
+                  modifier = Modifier
+                    .size(76.dp)
+                    .clip(CircleShape)
+                )
+                Spacer(modifier = Modifier.height(14.dp))
+                Text(
+                  text = "زهرة 3",
+                  fontSize = 20.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                  text = "وكيلك الذكي المحلي الموثوق",
+                  fontSize = 13.sp,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+              }
+            }
             // Suggestion 1: ابدأ دردشة صوتية
             ChatSuggestionRow(
               title = "ابدأ دردشة صوتية",
@@ -272,7 +315,7 @@ fun ChatScreen(
                     lineHeight = 23.sp
                   )
 
-                  // Tool payload if available (Religion, Tasks, Notes, Math, Translate, Image, Schedule)
+                  // Tool payload if available (Religion, Tasks, Notes, Math, Translate, Image, Schedule, Clarification)
                   if (message.toolPayload != null) {
                     Spacer(modifier = Modifier.height(10.dp))
                     InteractiveToolCard(
@@ -281,6 +324,12 @@ fun ChatScreen(
                       onQuickQuery = { onSendMessage(it) },
                       onNavigateToMemory = onNavigateToMemory
                     )
+                  }
+
+                  // Phase 4: Evidence Grounding Trace
+                  if (message.evidenceTrace != null && message.toolPayload !is com.example.zahra.model.ZahraToolPayload.EvidenceTracePayload) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    EvidenceTraceCard(trace = message.evidenceTrace)
                   }
 
                   Spacer(modifier = Modifier.height(8.dp))

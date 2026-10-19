@@ -145,7 +145,58 @@ sealed interface ZahraToolPayload {
     val warning: String? = null,
     val conflicts: List<String> = emptyList()
   ) : ZahraToolPayload
+
+  data class ClarificationToolPayload(
+    val clarification: ClarificationPayload
+  ) : ZahraToolPayload
+
+  data class EvidenceTracePayload(
+    val trace: EvidenceGroundingTrace
+  ) : ZahraToolPayload
 }
+
+enum class EvidenceType(val labelAr: String) {
+  VERIFIED("حقيقة محققة وموثقة"),
+  USER_SUPPLIED("معلومة زودها المستخدم"),
+  LOCAL_CURATED("بيانات محلية معتمدة"),
+  DEDUCTION("استنتاج رياضي/منطقي"),
+  ESTIMATE("تقدير تقريبي"),
+  UNKNOWN("غير مؤكد أو غير متاح")
+}
+
+data class GroundedFact(
+  val id: String = java.util.UUID.randomUUID().toString(),
+  val claim: String,
+  val evidenceType: EvidenceType,
+  val source: String,
+  val confidence: Double,
+  val supportingPremiseIds: List<String> = emptyList()
+)
+
+data class EvidenceGroundingTrace(
+  val originalRequest: String,
+  val detectedIntent: String,
+  val extractedEntities: Map<String, String> = emptyMap(),
+  val appliedRuleIds: List<String> = emptyList(),
+  val groundedFacts: List<GroundedFact> = emptyList(),
+  val uncertaintyNotes: List<String> = emptyList(),
+  val transparencySummary: String,
+  val inferenceStepsCount: Int = 1,
+  val processingTimeMs: Long = 0L
+)
+
+data class ClarificationOption(
+  val id: String,
+  val labelAr: String,
+  val associatedQuery: String
+)
+
+data class ClarificationPayload(
+  val question: String,
+  val options: List<ClarificationOption>,
+  val originalQuery: String,
+  val reason: String
+)
 
 data class DeepThinkingPayload(
   val steps: List<ThinkingStep>,
@@ -201,6 +252,8 @@ data class ZahraMessage(
   val followups: List<String> = emptyList(),
   val toolPayload: ZahraToolPayload? = null,
   val deepThinking: DeepThinkingPayload? = null,
+  val evidenceTrace: EvidenceGroundingTrace? = null,
+  val clarification: ClarificationPayload? = null,
   val timestamp: Long = System.currentTimeMillis()
 )
 
@@ -232,6 +285,8 @@ data class ZahraResponse(
   val followups: List<String> = emptyList(),
   val toolPayload: ZahraToolPayload? = null,
   val deepThinking: DeepThinkingPayload? = null,
+  val evidenceTrace: EvidenceGroundingTrace? = null,
+  val clarification: ClarificationPayload? = null,
   val createdTask: ZahraTask? = null,
   val createdNote: ZahraNote? = null,
   val createdSchedule: ZahraSchedule? = null

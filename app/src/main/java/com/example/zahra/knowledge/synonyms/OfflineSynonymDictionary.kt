@@ -83,10 +83,19 @@ class OfflineSynonymDictionary {
    */
   fun getBoundedExpansions(term: String, maxExpansions: Int = 3): List<String> {
     val norm = ArabicKnowledgeNormalizer.normalizeForSearch(term)
-    val direct = synonymMap[norm] ?: return emptyList()
+    val direct = synonymMap[norm]
+    if (direct != null && direct.isNotEmpty()) {
+      return direct.sorted().take(maxExpansions)
+    }
 
-    return direct.sorted() // Stable deterministic ordering
-      .take(maxExpansions)
+    // Sub-phrase and token matching for compound queries (e.g. "what is speed of light")
+    val matches = mutableSetOf<String>()
+    for ((canonical, aliases) in synonymMap) {
+      if (canonical.length >= 3 && (norm.contains(canonical) || canonical.contains(norm))) {
+        matches.addAll(aliases)
+      }
+    }
+    return matches.sorted().take(maxExpansions)
   }
 
   /**

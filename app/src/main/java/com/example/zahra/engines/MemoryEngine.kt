@@ -137,14 +137,19 @@ class MemoryEngine(
       else -> FactCategory.PREFERENCE
     }
 
-    // Handle split patterns like "رقم هاتفي هو X" or "اسمي هو X"
-    val isPattern = Regex("(.+?)\\s+(?:هو|هي|=)\\s+(.+)")
-    isPattern.find(rawContent)?.let { m ->
-      val extractedK = m.groupValues[1].trim()
-      val extractedV = m.groupValues[2].trim()
-      if (extractedK.length in 2..40 && extractedV.isNotEmpty()) {
-        key = extractedK
-        value = extractedV
+    // Handle split patterns like "رقم هاتفي هو X" or "اسمي هو X" or "اسمي X"
+    if (rawContent.startsWith("اسمي ") || rawContent.startsWith("اسمي هو ")) {
+      key = "الاسم"
+      value = rawContent.replace(Regex("""^اسمي(?:\s+هو)?\s+"""), "").trim()
+    } else {
+      val isPattern = Regex("(.+?)\\s+(?:هو|هي|=)\\s+(.+)")
+      isPattern.find(rawContent)?.let { m ->
+        val extractedK = m.groupValues[1].trim()
+        val extractedV = m.groupValues[2].trim()
+        if (extractedK.length in 2..40 && extractedV.isNotEmpty()) {
+          key = extractedK
+          value = extractedV
+        }
       }
     }
 

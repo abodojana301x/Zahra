@@ -271,23 +271,23 @@ object EntityExtractor {
   }
 
   private fun normalizeUnit(raw: String): String {
-    return when (raw) {
-      "كيلو", "كيلوغرام", "كجم", "kg" -> "kg"
-      "باوند", "رطل", "lb" -> "lb"
-      "كيلومتر", "كم", "km" -> "km"
-      "ميل", "mi" -> "mi"
-      "متر", "m" -> "m"
-      "قدم", "ft" -> "ft"
-      "مئوية", "سيليزيوس", "c" -> "C"
-      "فهرنهايت", "f" -> "F"
-      "لتر", "l" -> "L"
-      "جالون", "gal" -> "gal"
-      "دولار", "usd" -> "USD"
-      "ريال", "sar" -> "SAR"
-      "جنيه", "egp" -> "EGP"
-      "درهم", "aed" -> "AED"
-      "دينار", "kwd" -> "KWD"
-      "يورو", "eur" -> "EUR"
+    return when (raw.lowercase(Locale.ROOT)) {
+      "كيلو", "كيلوغرام", "كجم", "kg", "kilogram", "kilograms" -> "kg"
+      "باوند", "رطل", "lb", "lbs", "pound", "pounds" -> "lb"
+      "كيلومتر", "كم", "km", "kilometer", "kilometers" -> "km"
+      "ميل", "mi", "mile", "miles" -> "mi"
+      "متر", "m", "meter", "meters" -> "m"
+      "قدم", "ft", "feet", "foot" -> "ft"
+      "مئوية", "سيليزيوس", "c", "celsius" -> "C"
+      "فهرنهايت", "f", "fahrenheit" -> "F"
+      "لتر", "l", "liter", "liters" -> "L"
+      "جالون", "gal", "gallon", "gallons" -> "gal"
+      "دولار", "usd", "dollar", "dollars" -> "USD"
+      "ريال", "sar", "riyal", "riyals" -> "SAR"
+      "جنيه", "egp", "pound_eg" -> "EGP"
+      "درهم", "aed", "dirham" -> "AED"
+      "دينار", "kwd", "dinar" -> "KWD"
+      "يورو", "eur", "euro", "euros" -> "EUR"
       else -> raw
     }
   }

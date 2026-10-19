@@ -1,7 +1,10 @@
 package com.example.zahra.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -74,12 +77,20 @@ fun ZahraDrawerContent(
           .padding(bottom = 8.dp)
       ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+          Image(
+            painter = painterResource(id = R.drawable.ic_zahra_logo),
+            contentDescription = "شعار زهرة",
+            modifier = Modifier
+              .size(34.dp)
+              .clip(CircleShape)
+          )
+          Spacer(modifier = Modifier.width(10.dp))
           Text(
             text = "زهرة 3",
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(start = 4.dp)
+            modifier = Modifier.padding(start = 2.dp)
           )
           Spacer(modifier = Modifier.width(6.dp))
           Surface(
